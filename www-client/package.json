@@ -1,0 +1,13 @@
+{
+  "devDependencies": {
+    "elm-analyse": "*",
+    "elm-format": "*",
+    "elm-hot": "*",
+    "http-server": "*",
+    "node-elm-compiler": "*",
+    "parcel-bundler": "*"
+  },
+  "dependencies": {
+    "nosleep.js": "*"
+  }
+}
