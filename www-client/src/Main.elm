@@ -1,16 +1,13 @@
 port module Main exposing (..)
 
--- Press buttons to increment and decrement a counter.
---
--- Read how it works:
---   https://guide.elm-lang.org/architecture/buttons.html
---
-
 import Browser
 import Html exposing (..)
 import Html.Attributes as A exposing (..)
 import Html.Events exposing (..)
 import List
+import Material
+import Material.Button as Button
+import Material.Options as Options
 import String
 import Time
 
@@ -75,7 +72,11 @@ type alias Input =
     }
 
 
-type Model
+type alias Model =
+    { appModel : AppModel, mdc : Material.Model Msg }
+
+
+type AppModel
     = SetModel { input : Input }
     | RunModel { timeSpans : TimeSpans, state : RunState, step : RunStep, rest : TimeSpans }
 
@@ -98,7 +99,8 @@ type EventSource
 
 
 type Msg
-    = GoRunMsg
+    = Mdc (Material.Msg Msg)
+    | GoRunMsg
     | GoSetMsg
     | SetMsg EventSource String
     | TickMsg Time.Posix
@@ -293,23 +295,33 @@ init {} =
             , wet = 30
             }
     in
-    ( SetModel { input = fromTimeSpansToInput timeSpans }
+    ( { mdc = Material.defaultModel, appModel = SetModel { input = fromTimeSpansToInput timeSpans } }
     , Cmd.none
     )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case ( msg, model ) of
+    let
+        appModel =
+            model.appModel
+    in
+    case ( msg, appModel ) of
+        ( Mdc msg_, _ ) ->
+            Material.update Mdc msg_ model
+
         ( GoRunMsg, SetModel { input } ) ->
             case fromInputToTimeSpans input of
                 Just timeSpans ->
-                    ( RunModel
-                        { timeSpans = timeSpans
-                        , state = RunState
-                        , step = SoakStep
-                        , rest = timeSpans
-                        }
+                    ( { model
+                        | appModel =
+                            RunModel
+                                { timeSpans = timeSpans
+                                , state = RunState
+                                , step = SoakStep
+                                , rest = timeSpans
+                                }
+                      }
                     , setNoSleep True
                     )
 
@@ -330,7 +342,7 @@ update msg model =
                         rest_ =
                             { rest | soak = rest1 }
                     in
-                    ( RunModel { runModel | rest = rest_ }
+                    ( { model | appModel = RunModel { runModel | rest = rest_ } }
                     , if rest1 == 0 then
                         playAlarm ()
 
@@ -346,7 +358,7 @@ update msg model =
                         rest_ =
                             { rest | dev = rest1 }
                     in
-                    ( RunModel { runModel | rest = rest_ }
+                    ( { model | appModel = RunModel { runModel | rest = rest_ } }
                     , if rest1 == 0 then
                         playAlarm ()
 
@@ -362,7 +374,7 @@ update msg model =
                         rest_ =
                             { rest | stop = rest1 }
                     in
-                    ( RunModel { runModel | rest = rest_ }
+                    ( { model | appModel = RunModel { runModel | rest = rest_ } }
                     , if rest1 == 0 then
                         playAlarm ()
 
@@ -378,7 +390,7 @@ update msg model =
                         rest_ =
                             { rest | fix = rest1 }
                     in
-                    ( RunModel { runModel | rest = rest_ }
+                    ( { model | appModel = RunModel { runModel | rest = rest_ } }
                     , if rest1 == 0 then
                         playAlarm ()
 
@@ -394,7 +406,7 @@ update msg model =
                         rest_ =
                             { rest | rinse = rest1 }
                     in
-                    ( RunModel { runModel | rest = rest_ }
+                    ( { model | appModel = RunModel { runModel | rest = rest_ } }
                     , if rest1 == 0 then
                         playAlarm ()
 
@@ -410,7 +422,7 @@ update msg model =
                         rest_ =
                             { rest | wet = rest1 }
                     in
-                    ( RunModel { runModel | rest = rest_ }
+                    ( { model | appModel = RunModel { runModel | rest = rest_ } }
                     , if rest1 == 0 then
                         playAlarm ()
 
@@ -419,7 +431,7 @@ update msg model =
                     )
 
                 EndStep ->
-                    ( RunModel runModel, Cmd.none )
+                    ( model, Cmd.none )
 
         ( NextMsg, RunModel runModel ) ->
             let
@@ -428,110 +440,110 @@ update msg model =
             in
             case step_ of
                 EndStep ->
-                    ( RunModel { runModel | step = step_, state = PauseState }, Cmd.batch [stopAlarm (), setNoSleep False] )
+                    ( { model | appModel = RunModel { runModel | step = step_, state = PauseState } }, Cmd.batch [ stopAlarm (), setNoSleep False ] )
 
                 _ ->
-                    ( RunModel { runModel | step = step_, state = RunState }, Cmd.batch [stopAlarm (), setNoSleep True] )
+                    ( { model | appModel = RunModel { runModel | step = step_, state = RunState } }, Cmd.batch [ stopAlarm (), setNoSleep True ] )
 
         ( GoSetMsg, RunModel { timeSpans } ) ->
-            ( SetModel { input = fromTimeSpansToInput timeSpans }, Cmd.batch [stopAlarm (), setNoSleep False] )
+            ( { model | appModel = SetModel { input = fromTimeSpansToInput timeSpans } }, Cmd.batch [ stopAlarm (), setNoSleep False ] )
 
         ( PauseMsg, RunModel runModel ) ->
-            ( RunModel { runModel | state = PauseState }, Cmd.batch [stopAlarm (), setNoSleep False] )
+            ( { model | appModel = RunModel { runModel | state = PauseState } }, Cmd.batch [ stopAlarm (), setNoSleep False ] )
 
         ( RestartMsg, RunModel runModel ) ->
-            ( RunModel { runModel | state = RunState }, setNoSleep True )
+            ( { model | appModel = RunModel { runModel | state = RunState } }, setNoSleep True )
 
         ( InitMsg, RunModel runModel ) ->
             let
                 spans =
                     runModel.timeSpans
             in
-            ( RunModel { runModel | state = PauseState, rest = spans, step = SoakStep }, Cmd.batch [stopAlarm (), setNoSleep False] )
+            ( { model | appModel = RunModel { runModel | state = PauseState, rest = spans, step = SoakStep } }, Cmd.batch [ stopAlarm (), setNoSleep False ] )
 
         ( SetMsg SoakMinutesSource value, SetModel { input } ) ->
             let
                 timeInput =
                     input.soak
             in
-            ( SetModel { input = { input | soak = { timeInput | minutes = value } } }, Cmd.none )
+            ( { model | appModel = SetModel { input = { input | soak = { timeInput | minutes = value } } } }, Cmd.none )
 
         ( SetMsg SoakSecondsSource value, SetModel { input } ) ->
             let
                 timeInput =
                     input.soak
             in
-            ( SetModel { input = { input | soak = { timeInput | seconds = value } } }, Cmd.none )
+            ( { model | appModel = SetModel { input = { input | soak = { timeInput | seconds = value } } } }, Cmd.none )
 
         ( SetMsg DevMinutesSource value, SetModel { input } ) ->
             let
                 timeInput =
                     input.dev
             in
-            ( SetModel { input = { input | dev = { timeInput | minutes = value } } }, Cmd.none )
+            ( { model | appModel = SetModel { input = { input | dev = { timeInput | minutes = value } } } }, Cmd.none )
 
         ( SetMsg DevSecondsSource value, SetModel { input } ) ->
             let
                 timeInput =
                     input.dev
             in
-            ( SetModel { input = { input | dev = { timeInput | seconds = value } } }, Cmd.none )
+            ( { model | appModel = SetModel { input = { input | dev = { timeInput | seconds = value } } } }, Cmd.none )
 
         ( SetMsg StopMinutesSource value, SetModel { input } ) ->
             let
                 timeInput =
                     input.stop
             in
-            ( SetModel { input = { input | stop = { timeInput | minutes = value } } }, Cmd.none )
+            ( { model | appModel = SetModel { input = { input | stop = { timeInput | minutes = value } } } }, Cmd.none )
 
         ( SetMsg StopSecondsSource value, SetModel { input } ) ->
             let
                 timeInput =
                     input.stop
             in
-            ( SetModel { input = { input | stop = { timeInput | seconds = value } } }, Cmd.none )
+            ( { model | appModel = SetModel { input = { input | stop = { timeInput | seconds = value } } } }, Cmd.none )
 
         ( SetMsg FixMinutesSource value, SetModel { input } ) ->
             let
                 timeInput =
                     input.fix
             in
-            ( SetModel { input = { input | fix = { timeInput | minutes = value } } }, Cmd.none )
+            ( { model | appModel = SetModel { input = { input | fix = { timeInput | minutes = value } } } }, Cmd.none )
 
         ( SetMsg FixSecondsSource value, SetModel { input } ) ->
             let
                 timeInput =
                     input.fix
             in
-            ( SetModel { input = { input | fix = { timeInput | seconds = value } } }, Cmd.none )
+            ( { model | appModel = SetModel { input = { input | fix = { timeInput | seconds = value } } } }, Cmd.none )
 
         ( SetMsg RinseMinutesSource value, SetModel { input } ) ->
             let
                 timeInput =
                     input.rinse
             in
-            ( SetModel { input = { input | rinse = { timeInput | minutes = value } } }, Cmd.none )
+            ( { model | appModel = SetModel { input = { input | rinse = { timeInput | minutes = value } } } }, Cmd.none )
 
         ( SetMsg RinseSecondsSource value, SetModel { input } ) ->
             let
                 timeInput =
                     input.rinse
             in
-            ( SetModel { input = { input | rinse = { timeInput | seconds = value } } }, Cmd.none )
+            ( { model | appModel = SetModel { input = { input | rinse = { timeInput | seconds = value } } } }, Cmd.none )
 
         ( SetMsg WetMinutesSource value, SetModel { input } ) ->
             let
                 timeInput =
                     input.wet
             in
-            ( SetModel { input = { input | wet = { timeInput | minutes = value } } }, Cmd.none )
+            ( { model | appModel = SetModel { input = { input | wet = { timeInput | minutes = value } } } }, Cmd.none )
 
         ( SetMsg WetSecondsSource value, SetModel { input } ) ->
             let
                 timeInput =
                     input.wet
             in
-            ( SetModel { input = { input | wet = { timeInput | seconds = value } } }, Cmd.none )
+            ( { model | appModel = SetModel { input = { input | wet = { timeInput | seconds = value } } } }, Cmd.none )
 
         _ ->
             ( model, alert "unexpected: update" )
@@ -539,17 +551,24 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    case model of
+    let
+        appModel =
+            model.appModel
+    in
+    case appModel of
         SetModel _ ->
-            Sub.none
+            Material.subscriptions Mdc model
 
         RunModel { state } ->
             case state of
                 RunState ->
-                    Time.every 1000 TickMsg
+                    Sub.batch
+                        [ Time.every 1000 TickMsg
+                        , Material.subscriptions Mdc model
+                        ]
 
                 PauseState ->
-                    Sub.none
+                    Material.subscriptions Mdc model
 
 
 stepClass : Order -> String
@@ -576,7 +595,11 @@ fillZero str =
 
 view : Model -> Html Msg
 view model =
-    case model of
+    let
+        appModel =
+            model.appModel
+    in
+    case appModel of
         SetModel setModel ->
             div []
                 [ table []
