@@ -2,6 +2,10 @@
 
 import { Elm } from './Main.elm'
 import { default as NoSleep } from 'nosleep.js'
+import 'material-components-web/dist/material-components-web.min.css'
+import 'material-components-web/dist/material-components-web.min.js'
+import 'elm-mdc/elm-mdc.js'
+import './main.css'
 
 let alarm = document.getElementById('alarm');
 let noSleep = new NoSleep();

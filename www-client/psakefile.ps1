@@ -1,5 +1,22 @@
-Task Setup {
+Task Setup -depends MdcSetup {
     Exec { npm install }
+}
+
+Task MdcSetup {
+    Exec {
+        git submodule update --init
+        Push-Location .\elm-mdc
+        npm install
+        Pop-Location
+    }
+}
+
+Task MdcBuild {
+    Exec {
+        Push-Location .\elm-mdc
+        npm run build
+        Pop-Location
+    }
 }
 
 Task DevServer {
@@ -10,7 +27,7 @@ Task Format {
     Exec { Get-ChildItem -Path src -Include *.elm -Recurse | ForEach-Object { node_modules\.bin\elm-format --yes $_ } }
 }
 
-Task Build {
+Task Build -depends MdcBuild {
     Exec {
         node_modules\.bin\parcel build -d dist .\src\index.html
         git rev-parse HEAD | Out-File .\dist\revision

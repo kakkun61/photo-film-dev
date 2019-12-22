@@ -8,6 +8,8 @@
     "parcel-bundler": "*"
   },
   "dependencies": {
+    "elm-mdc": "file:elm-mdc",
+    "material-components-web": "*",
     "nosleep.js": "*"
   }
 }
