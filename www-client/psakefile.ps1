@@ -20,22 +20,22 @@ Task MdcBuild {
 }
 
 Task DevServer {
-    Exec { node_modules\.bin\parcel src\index.html }
+    Exec { npm run parcel -- src\index.html }
 }
 
 Task Format {
-    Exec { Get-ChildItem -Path src -Include *.elm -Recurse | ForEach-Object { node_modules\.bin\elm-format --yes $_ } }
+    Exec { Get-ChildItem -Path src -Include *.elm -Recurse | ForEach-Object { npm run elm-format -- --yes $_ } }
 }
 
 Task Build -depends MdcBuild {
     Exec {
-        node_modules\.bin\parcel build -d dist .\src\index.html
+        npm run parcel -- build -d dist .\src\index.html
         git rev-parse HEAD | Out-File .\dist\revision
     }
 }
 
 Task Server {
-    Exec { node_modules\.bin\http-server dist }
+    Exec { npm run http-server -- dist }
 }
 
 Task Clean {

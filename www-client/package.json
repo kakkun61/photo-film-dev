@@ -11,5 +11,10 @@
     "elm-mdc": "file:elm-mdc",
     "material-components-web": "*",
     "nosleep.js": "*"
+  },
+  "scripts": {
+    "elm-format": "elm-format",
+    "http-server": "http-server",
+    "parcel": "parcel"
   }
 }
