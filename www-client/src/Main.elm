@@ -8,6 +8,8 @@ import List
 import Material
 import Material.Button as Button
 import Material.Options as Options
+import Material.TextField as TextField
+import Material.Elevation as Elevation
 import String
 import Time
 
@@ -296,7 +298,7 @@ init {} =
             }
     in
     ( { mdc = Material.defaultModel, appModel = SetModel { input = fromTimeSpansToInput timeSpans } }
-    , Cmd.none
+    , Material.init Mdc
     )
 
 
@@ -601,323 +603,407 @@ view model =
     in
     case appModel of
         SetModel setModel ->
-            div []
-                [ table []
-                    [ tbody []
-                        [ tr []
-                            [ td [ class "label" ] [ text "前浴" ]
-                            , td []
-                                [ input [ type_ "number", A.min "0", A.max "59", value "0", value setModel.input.soak.minutes, onInput (SetMsg SoakMinutesSource) ] []
-                                , text "' "
-                                , input [ type_ "number", A.min "0", A.max "59", value "0", value setModel.input.soak.seconds, onInput (SetMsg SoakSecondsSource) ] []
+            div
+                [ class "root" ]
+                [ div
+                    [ class "content" ]
+                    [ table []
+                        [ tbody []
+                            [ tr []
+                                [ td [ class "label" ] [ text "前浴" ]
+                                , td [ class "input" ]
+                                    [ input [ type_ "number", A.min "0", A.max "59", value setModel.input.soak.minutes, onInput (SetMsg SoakMinutesSource) ] []
+                                    , text "' "
+                                    , input [ type_ "number", A.min "0", A.max "59", value setModel.input.soak.seconds, onInput (SetMsg SoakSecondsSource) ] []
+                                    ]
                                 ]
-                            ]
-                        , tr []
-                            [ td [ class "label" ] [ text "現像" ]
-                            , td []
-                                [ input [ type_ "number", A.min "0", A.max "59", value "0", value setModel.input.dev.minutes, onInput (SetMsg DevMinutesSource) ] []
-                                , text "' "
-                                , input [ type_ "number", A.min "0", A.max "59", value "0", value setModel.input.dev.seconds, onInput (SetMsg DevSecondsSource) ] []
+                            , tr []
+                                [ td [ class "label" ] [ text "現像" ]
+                                , td [ class "input" ]
+                                    [ input [ type_ "number", A.min "0", A.max "59", value setModel.input.dev.minutes, onInput (SetMsg DevMinutesSource) ] []
+                                    , text "' "
+                                    , input [ type_ "number", A.min "0", A.max "59", value setModel.input.dev.seconds, onInput (SetMsg DevSecondsSource) ] []
+                                    ]
                                 ]
-                            ]
-                        , tr []
-                            [ td [ class "label" ] [ text "停止" ]
-                            , td []
-                                [ input [ type_ "number", A.min "0", A.max "59", value "0", value setModel.input.stop.minutes, onInput (SetMsg StopMinutesSource) ] []
-                                , text "' "
-                                , input [ type_ "number", A.min "0", A.max "59", value "0", value setModel.input.stop.seconds, onInput (SetMsg StopSecondsSource) ] []
+                            , tr []
+                                [ td [ class "label" ] [ text "停止" ]
+                                , td [ class "input" ]
+                                    [ input [ type_ "number", A.min "0", A.max "59", value setModel.input.stop.minutes, onInput (SetMsg StopMinutesSource) ] []
+                                    , text "' "
+                                    , input [ type_ "number", A.min "0", A.max "59", value setModel.input.stop.seconds, onInput (SetMsg StopSecondsSource) ] []
+                                    ]
                                 ]
-                            ]
-                        , tr []
-                            [ td [ class "label" ] [ text "定着" ]
-                            , td []
-                                [ input [ type_ "number", A.min "0", A.max "59", value "0", value setModel.input.fix.minutes, onInput (SetMsg FixMinutesSource) ] []
-                                , text "' "
-                                , input [ type_ "number", A.min "0", A.max "59", value "0", value setModel.input.fix.seconds, onInput (SetMsg FixSecondsSource) ] []
+                            , tr []
+                                [ td [ class "label" ] [ text "定着" ]
+                                , td [ class "input" ]
+                                    [ input [ type_ "number", A.min "0", A.max "59", value setModel.input.fix.minutes, onInput (SetMsg FixMinutesSource) ] []
+                                    , text "' "
+                                    , input [ type_ "number", A.min "0", A.max "59", value setModel.input.fix.seconds, onInput (SetMsg FixSecondsSource) ] []
+                                    ]
                                 ]
-                            ]
-                        , tr []
-                            [ td [ class "label" ] [ text "水洗" ]
-                            , td []
-                                [ input [ type_ "number", A.min "0", A.max "59", value "0", value setModel.input.rinse.minutes, onInput (SetMsg RinseMinutesSource) ] []
-                                , text "' "
-                                , input [ type_ "number", A.min "0", A.max "59", value "0", value setModel.input.rinse.seconds, onInput (SetMsg RinseSecondsSource) ] []
+                            , tr []
+                                [ td [ class "label" ] [ text "水洗" ]
+                                , td [ class "input" ]
+                                    [ input [ type_ "number", A.min "0", A.max "59", value setModel.input.rinse.minutes, onInput (SetMsg RinseMinutesSource) ] []
+                                    , text "' "
+                                    , input [ type_ "number", A.min "0", A.max "59", value setModel.input.rinse.seconds, onInput (SetMsg RinseSecondsSource) ] []
+                                    ]
                                 ]
-                            ]
-                        , tr []
-                            [ td [ class "label" ] [ text "防滴" ]
-                            , td []
-                                [ input [ type_ "number", A.min "0", A.max "59", value "0", value setModel.input.wet.minutes, onInput (SetMsg WetMinutesSource) ] []
-                                , text "' "
-                                , input [ type_ "number", A.min "0", A.max "59", value "0", value setModel.input.wet.seconds, onInput (SetMsg WetSecondsSource) ] []
+                            , tr []
+                                [ td [ class "label" ] [ text "防滴" ]
+                                , td [ class "input" ]
+                                    [ input [ type_ "number", A.min "0", A.max "59", value setModel.input.wet.minutes, onInput (SetMsg WetMinutesSource) ] []
+                                    , text "' "
+                                    , input [ type_ "number", A.min "0", A.max "59", value setModel.input.wet.seconds, onInput (SetMsg WetSecondsSource) ] []
+                                    ]
                                 ]
                             ]
                         ]
+                    , p []
+                        [ a
+                            [ href "/credit.html" ]
+                            [ text "クレジット" ]
+                        ]
                     ]
-                , button [ onClick GoRunMsg ] [ text "開始" ]
+                , Options.styled
+                    footer
+                    [ Elevation.z8
+                    , Options.cs "control"
+                    ]
+                    [ Button.view Mdc
+                        "start"
+                        model.mdc
+                        [ Button.ripple
+                        , Button.raised
+                        , Options.cs "one-line"
+                        , Options.onClick GoRunMsg
+                        ]
+                        [ text "開始"
+                        ]
+                    ]
                 ]
 
         RunModel { timeSpans, step, rest, state } ->
-            div []
-                [ table []
-                    [ tbody []
-                        [ let
-                            order =
-                                stepOrder step SoakStep
-                          in
-                          tr []
-                            [ td
-                                [ class <| stepClass order
-                                , class "label"
-                                ]
-                                [ text "前浴" ]
-                            , let
-                                { sign, minutes, seconds } =
-                                    fromSecondsToMinutesSeconds rest.soak
+            div
+                [ class "root" ]
+                [ div
+                    [ class "content" ]
+                    [ table []
+                        [ tbody []
+                            [ let
+                                order =
+                                    stepOrder step SoakStep
                               in
-                              td
-                                ([ class <| stepClass order
-                                 , class "time"
-                                 ]
-                                    ++ (if sign == "" then
-                                            [ class "rest-plus" ]
-
-                                        else
-                                            []
-                                       )
-                                )
-                                [ text <| sign ++ String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
-                                ]
-                            , td
-                                [ class <| stepClass order ]
-                                [ text "/" ]
-                            , td
-                                [ class <| stepClass order
-                                , class "time"
-                                ]
-                                [ let
-                                    { minutes, seconds } =
-                                        fromSecondsToMinutesSeconds timeSpans.soak
+                              tr []
+                                [ td
+                                    [ class <| stepClass order
+                                    , class "label"
+                                    ]
+                                    [ text "前浴" ]
+                                , let
+                                    { sign, minutes, seconds } =
+                                        fromSecondsToMinutesSeconds rest.soak
                                   in
-                                  text <| String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
+                                  td
+                                    ([ class <| stepClass order
+                                     , class "time"
+                                     ]
+                                        ++ (if sign == "" then
+                                                [ class "rest-plus" ]
+
+                                            else
+                                                []
+                                           )
+                                    )
+                                    [ text <| sign ++ String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
+                                    ]
+                                , td
+                                    [ class <| stepClass order ]
+                                    [ text "/" ]
+                                , td
+                                    [ class <| stepClass order
+                                    , class "time"
+                                    ]
+                                    [ let
+                                        { minutes, seconds } =
+                                            fromSecondsToMinutesSeconds timeSpans.soak
+                                      in
+                                      text <| String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
+                                    ]
                                 ]
-                            ]
-                        , let
-                            order =
-                                stepOrder step DevStep
-                          in
-                          tr []
-                            [ td
-                                [ class <| stepClass order
-                                , class "label"
-                                ]
-                                [ text "現像" ]
                             , let
-                                { sign, minutes, seconds } =
-                                    fromSecondsToMinutesSeconds rest.dev
+                                order =
+                                    stepOrder step DevStep
                               in
-                              td
-                                ([ class <| stepClass order
-                                 , class "time"
-                                 ]
-                                    ++ (if sign == "" then
-                                            [ class "rest-plus" ]
-
-                                        else
-                                            []
-                                       )
-                                )
-                                [ text <| sign ++ String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
-                                ]
-                            , td
-                                [ class <| stepClass order ]
-                                [ text "/" ]
-                            , td
-                                [ class <| stepClass order
-                                , class "time"
-                                ]
-                                [ let
-                                    { minutes, seconds } =
-                                        fromSecondsToMinutesSeconds timeSpans.dev
+                              tr []
+                                [ td
+                                    [ class <| stepClass order
+                                    , class "label"
+                                    ]
+                                    [ text "現像" ]
+                                , let
+                                    { sign, minutes, seconds } =
+                                        fromSecondsToMinutesSeconds rest.dev
                                   in
-                                  text <| String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
+                                  td
+                                    ([ class <| stepClass order
+                                     , class "time"
+                                     ]
+                                        ++ (if sign == "" then
+                                                [ class "rest-plus" ]
+
+                                            else
+                                                []
+                                           )
+                                    )
+                                    [ text <| sign ++ String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
+                                    ]
+                                , td
+                                    [ class <| stepClass order ]
+                                    [ text "/" ]
+                                , td
+                                    [ class <| stepClass order
+                                    , class "time"
+                                    ]
+                                    [ let
+                                        { minutes, seconds } =
+                                            fromSecondsToMinutesSeconds timeSpans.dev
+                                      in
+                                      text <| String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
+                                    ]
                                 ]
-                            ]
-                        , let
-                            order =
-                                stepOrder step StopStep
-                          in
-                          tr []
-                            [ td
-                                [ class <| stepClass order
-                                , class "label"
-                                ]
-                                [ text "停止" ]
                             , let
-                                { sign, minutes, seconds } =
-                                    fromSecondsToMinutesSeconds rest.stop
+                                order =
+                                    stepOrder step StopStep
                               in
-                              td
-                                ([ class <| stepClass order
-                                 , class "time"
-                                 ]
-                                    ++ (if sign == "" then
-                                            [ class "rest-plus" ]
-
-                                        else
-                                            []
-                                       )
-                                )
-                                [ text <| sign ++ String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
-                                ]
-                            , td
-                                [ class <| stepClass order ]
-                                [ text "/" ]
-                            , td
-                                [ class <| stepClass order
-                                , class "time"
-                                ]
-                                [ let
-                                    { minutes, seconds } =
-                                        fromSecondsToMinutesSeconds timeSpans.stop
+                              tr []
+                                [ td
+                                    [ class <| stepClass order
+                                    , class "label"
+                                    ]
+                                    [ text "停止" ]
+                                , let
+                                    { sign, minutes, seconds } =
+                                        fromSecondsToMinutesSeconds rest.stop
                                   in
-                                  text <| String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
+                                  td
+                                    ([ class <| stepClass order
+                                     , class "time"
+                                     ]
+                                        ++ (if sign == "" then
+                                                [ class "rest-plus" ]
+
+                                            else
+                                                []
+                                           )
+                                    )
+                                    [ text <| sign ++ String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
+                                    ]
+                                , td
+                                    [ class <| stepClass order ]
+                                    [ text "/" ]
+                                , td
+                                    [ class <| stepClass order
+                                    , class "time"
+                                    ]
+                                    [ let
+                                        { minutes, seconds } =
+                                            fromSecondsToMinutesSeconds timeSpans.stop
+                                      in
+                                      text <| String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
+                                    ]
                                 ]
-                            ]
-                        , let
-                            order =
-                                stepOrder step FixStep
-                          in
-                          tr []
-                            [ td
-                                [ class <| stepClass order
-                                , class "label"
-                                ]
-                                [ text "定着" ]
                             , let
-                                { sign, minutes, seconds } =
-                                    fromSecondsToMinutesSeconds rest.fix
+                                order =
+                                    stepOrder step FixStep
                               in
-                              td
-                                ([ class <| stepClass order
-                                 , class "time"
-                                 ]
-                                    ++ (if sign == "" then
-                                            [ class "rest-plus" ]
-
-                                        else
-                                            []
-                                       )
-                                )
-                                [ text <| sign ++ String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
-                                ]
-                            , td
-                                [ class <| stepClass order ]
-                                [ text "/" ]
-                            , td
-                                [ class <| stepClass order
-                                , class "time"
-                                ]
-                                [ let
-                                    { minutes, seconds } =
-                                        fromSecondsToMinutesSeconds timeSpans.fix
+                              tr []
+                                [ td
+                                    [ class <| stepClass order
+                                    , class "label"
+                                    ]
+                                    [ text "定着" ]
+                                , let
+                                    { sign, minutes, seconds } =
+                                        fromSecondsToMinutesSeconds rest.fix
                                   in
-                                  text <| String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
+                                  td
+                                    ([ class <| stepClass order
+                                     , class "time"
+                                     ]
+                                        ++ (if sign == "" then
+                                                [ class "rest-plus" ]
+
+                                            else
+                                                []
+                                           )
+                                    )
+                                    [ text <| sign ++ String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
+                                    ]
+                                , td
+                                    [ class <| stepClass order ]
+                                    [ text "/" ]
+                                , td
+                                    [ class <| stepClass order
+                                    , class "time"
+                                    ]
+                                    [ let
+                                        { minutes, seconds } =
+                                            fromSecondsToMinutesSeconds timeSpans.fix
+                                      in
+                                      text <| String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
+                                    ]
                                 ]
-                            ]
-                        , let
-                            order =
-                                stepOrder step RinseStep
-                          in
-                          tr []
-                            [ td
-                                [ class <| stepClass order
-                                , class "label"
-                                ]
-                                [ text "水洗" ]
                             , let
-                                { sign, minutes, seconds } =
-                                    fromSecondsToMinutesSeconds rest.rinse
+                                order =
+                                    stepOrder step RinseStep
                               in
-                              td
-                                ([ class <| stepClass order
-                                 , class "time"
-                                 ]
-                                    ++ (if sign == "" then
-                                            [ class "rest-plus" ]
-
-                                        else
-                                            []
-                                       )
-                                )
-                                [ text <| sign ++ String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
-                                ]
-                            , td
-                                [ class <| stepClass order ]
-                                [ text "/" ]
-                            , td
-                                [ class <| stepClass order
-                                , class "time"
-                                ]
-                                [ let
-                                    { minutes, seconds } =
-                                        fromSecondsToMinutesSeconds timeSpans.rinse
+                              tr []
+                                [ td
+                                    [ class <| stepClass order
+                                    , class "label"
+                                    ]
+                                    [ text "水洗" ]
+                                , let
+                                    { sign, minutes, seconds } =
+                                        fromSecondsToMinutesSeconds rest.rinse
                                   in
-                                  text <| String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
+                                  td
+                                    ([ class <| stepClass order
+                                     , class "time"
+                                     ]
+                                        ++ (if sign == "" then
+                                                [ class "rest-plus" ]
+
+                                            else
+                                                []
+                                           )
+                                    )
+                                    [ text <| sign ++ String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
+                                    ]
+                                , td
+                                    [ class <| stepClass order ]
+                                    [ text "/" ]
+                                , td
+                                    [ class <| stepClass order
+                                    , class "time"
+                                    ]
+                                    [ let
+                                        { minutes, seconds } =
+                                            fromSecondsToMinutesSeconds timeSpans.rinse
+                                      in
+                                      text <| String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
+                                    ]
                                 ]
-                            ]
-                        , let
-                            order =
-                                stepOrder step WetStep
-                          in
-                          tr []
-                            [ td
-                                [ class <| stepClass order
-                                , class "label"
-                                ]
-                                [ text "防滴" ]
                             , let
-                                { sign, minutes, seconds } =
-                                    fromSecondsToMinutesSeconds rest.wet
+                                order =
+                                    stepOrder step WetStep
                               in
-                              td
-                                ([ class <| stepClass order
-                                 , class "time"
-                                 ]
-                                    ++ (if sign == "" then
-                                            [ class "rest-plus" ]
-
-                                        else
-                                            []
-                                       )
-                                )
-                                [ text <| sign ++ String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
-                                ]
-                            , td
-                                [ class <| stepClass order ]
-                                [ text "/" ]
-                            , td
-                                [ class <| stepClass order
-                                , class "time"
-                                ]
-                                [ let
-                                    { minutes, seconds } =
-                                        fromSecondsToMinutesSeconds timeSpans.wet
+                              tr []
+                                [ td
+                                    [ class <| stepClass order
+                                    , class "label"
+                                    ]
+                                    [ text "防滴" ]
+                                , let
+                                    { sign, minutes, seconds } =
+                                        fromSecondsToMinutesSeconds rest.wet
                                   in
-                                  text <| String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
+                                  td
+                                    ([ class <| stepClass order
+                                     , class "time"
+                                     ]
+                                        ++ (if sign == "" then
+                                                [ class "rest-plus" ]
+
+                                            else
+                                                []
+                                           )
+                                    )
+                                    [ text <| sign ++ String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
+                                    ]
+                                , td
+                                    [ class <| stepClass order ]
+                                    [ text "/" ]
+                                , td
+                                    [ class <| stepClass order
+                                    , class "time"
+                                    ]
+                                    [ let
+                                        { minutes, seconds } =
+                                            fromSecondsToMinutesSeconds timeSpans.wet
+                                      in
+                                      text <| String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
+                                    ]
                                 ]
                             ]
                         ]
+                    , p []
+                        [ a
+                            [ href "/credit.html" ]
+                            [ text "クレジット" ]
+                        ]
                     ]
-                , div []
-                    [ case state of
-                        RunState ->
-                            button [ class "pause-restart", onClick PauseMsg ] [ text "一時停止" ]
+                , Options.styled
+                    footer
+                    [ Elevation.z8
+                    , Options.cs "control"
+                    ]
+                    [ Button.view Mdc
+                        "next"
+                        model.mdc
+                        [ Button.ripple
+                        , Button.raised
+                        , Options.cs "one-line"
+                        , Options.onClick NextMsg
+                        ]
+                        [ text "次へ"
+                        ]
+                    , div [ class "one-line" ]
+                        [ case state of
+                            RunState ->
+                                Button.view Mdc
+                                    "pause"
+                                    model.mdc
+                                    [ Button.ripple
+                                    , Button.outlined
+                                    , Options.cs "third-line"
+                                    , Options.onClick PauseMsg
+                                    ]
+                                    [ text "一時停止"
+                                    ]
 
-                        PauseState ->
-                            button [ class "pause-restart", onClick RestartMsg ] [ text "再開" ]
-                    , button [ onClick NextMsg ] [ text "次へ" ]
-                    , button [ onClick InitMsg ] [ text "初期化" ]
-                    , div [] [ button [ onClick GoSetMsg ] [ text "入力" ] ]
+                            PauseState ->
+                                Button.view Mdc
+                                    "restart"
+                                    model.mdc
+                                    [ Button.ripple
+                                    , Button.unelevated
+                                    , Options.cs "third-line"
+                                    , Options.onClick RestartMsg
+                                    ]
+                                    [ text "再開"
+                                    ]
+                        , Button.view Mdc
+                            "init"
+                            model.mdc
+                            [ Button.ripple
+                            , Button.outlined
+                            , Options.cs "third-line"
+                            , Options.onClick InitMsg
+                            ]
+                            [ text "初期化"
+                            ]
+                        , Button.view Mdc
+                            "input"
+                            model.mdc
+                            [ Button.ripple
+                            , Button.outlined
+                            , Options.cs "third-line"
+                            , Options.onClick GoSetMsg
+                            ]
+                            [ text "入力"
+                            ]
+                        ]
                     ]
                 ]
