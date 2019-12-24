@@ -20,7 +20,7 @@ Task MdcBuild {
 }
 
 Task DevServer {
-    Exec { npm run parcel -- src\index.html }
+    Exec { npm run parcel -- .\src\index.html .\src\credit.html}
 }
 
 Task Format {
@@ -29,7 +29,7 @@ Task Format {
 
 Task Build -depends MdcBuild {
     Exec {
-        npm run parcel -- build -d dist .\src\index.html
+        npm run parcel -- build -d dist .\src\index.html .\src\credit.html
         git rev-parse HEAD | Out-File .\dist\revision
     }
 }
