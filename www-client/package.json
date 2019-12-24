@@ -14,9 +14,6 @@
     "nosleep.js": "*"
   },
   "scripts": {
-    "elm-format": "elm-format",
-    "http-server": "http-server",
-    "parcel": "parcel",
     "credit": "node dev/credit.js"
   }
 }
