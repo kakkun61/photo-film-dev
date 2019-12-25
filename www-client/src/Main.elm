@@ -471,7 +471,12 @@ update msg model =
                     ( { model | appModel = RunModel { runModel | state = PauseState } }, Cmd.batch [ stopAlarm (), setNoSleep False ] )
 
                 ( RestartMsg, RunModel runModel ) ->
-                    ( { model | appModel = RunModel { runModel | state = RunState } }, setNoSleep True )
+                    case runModel.step of
+                        EndStep ->
+                            ( model, Cmd.none )
+
+                        _ ->
+                            ( { model | appModel = RunModel { runModel | state = RunState } }, setNoSleep True )
 
                 ( InitMsg, RunModel runModel ) ->
                     let
