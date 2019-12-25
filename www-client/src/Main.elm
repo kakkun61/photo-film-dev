@@ -7,9 +7,9 @@ import Html.Events exposing (..)
 import List
 import Material
 import Material.Button as Button
+import Material.Elevation as Elevation
 import Material.Options as Options
 import Material.TextField as TextField
-import Material.Elevation as Elevation
 import String
 import Time
 
