@@ -27,7 +27,11 @@ Task Format {
     Exec { Get-ChildItem -Path src -Include *.elm -Recurse | ForEach-Object { & "$(npm bin)\elm-format.ps1" -- --yes $_ } }
 }
 
-Task Build -depends MdcBuild {
+Task CreditBuild {
+    Exec { npm run credit }
+}
+
+Task Build -depends MdcBuild, CreditBuild {
     Exec {
         & "$(npm bin)\parcel.ps1" -- build -d dist .\src\index.html .\src\credit.html
         git rev-parse HEAD | Out-File .\dist\revision

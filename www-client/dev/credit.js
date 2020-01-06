@@ -1,25 +1,44 @@
 const fs = require('fs');
-const checker = require('license-checker');
+const lc = require('license-checker');
+const elc = require('elm-license-checker');
 
-checker.init({
-    start: '.',
-    production: true,
-    customFormat: {
-        name: true,
-        version: false,
-        description: false,
-        repository: false,
-        publisher: false,
-        email: false,
-        url: false,
-        copyright: true,
-        licenses: false,
-        licenseFile: true,
-        licenseText: false,
-        licenseModified: false,
-        path: false
+lc.init(
+    {
+        start: '.',
+        production: true,
+        customFormat: {
+            name: true,
+            version: false,
+            description: false,
+            repository: false,
+            publisher: false,
+            email: false,
+            url: false,
+            copyright: true,
+            licenses: false,
+            licenseFile: true,
+            licenseText: false,
+            licenseModified: false,
+            path: false
+        }
+    },
+    (err, jsLicenses) => {
+        if (err) {
+            console.log(err);
+            process.exit(1);
+        }
+        elc.init(
+            { start: '.' },
+            (err, elmLicenses) => {
+                if (err) {
+                    console.log(err);
+                    process.exit(1);
+                }
+                checkerThen(Object.assign(elmLicenses, jsLicenses));
+            }
+        );
     }
-}, checkerThen);
+);
 
 function template(packages) {
     const list = [];
@@ -35,53 +54,18 @@ function template(packages) {
     <title>Photo Film Dev</title>
   </head>
   <body>
-    <h1>クレジット</h1>
+    <h1>Credits</h1>
     <dl>
       <dt>Photo Film Dev</dt>
       <dd>
         岡本和樹 (Kazuki Okamoto)<br>
         BSD 3-Clause License (Revised)<br>
-        <a href="LICENSE.html">全文</a>
+        <a href="LICENSE.html">Full Text</a>
       </dd>
       <dt>elm/compiler</dt>
       <dd>
         Copyright 2012-present Evan Czaplicki<br>
-        <a href="LICENSE.elm_compiler.txt">全文</a>
-      </dd>
-      <dt>elm/core</dt>
-      <dd>
-        Copyright 2014-present Evan Czaplicki<br>
-        <a href="LICENSE.elm_core.txt">全文</a>
-      </dd>
-      <dt>elm/browser</dt>
-      <dd>
-        Copyright 2017-present Evan Czaplicki<br>
-        <a href="LICENSE.elm_browser.txt">全文</a>
-      </dd>
-      <dt>elm/html</dt>
-      <dd>
-        Copyright (c) 2014-present, Evan Czaplicki<br>
-        <a href="LICENSE.elm_html.txt">全文</a>
-      </dd>
-      <dt>elm/time</dt>
-      <dd>
-        Copyright (c) 2018-present, Evan Czaplicki<br>
-        <a href="LICENSE.elm_time.txt">全文</a>
-      </dd>
-      <dt>elm/json</dt>
-      <dd>
-        Copyright 2014-present Evan Czaplicki<br>
-        <a href="LICENSE.elm_json.txt">全文</a>
-      </dd>
-      <dt>elm/url</dt>
-      <dd>
-        Copyright (c) 2016, Evan Czaplicki<br>
-        <a href="LICENSE.elm_url.txt">全文</a>
-      </dd>
-      <dt>elm/virtual-dom</dt>
-      <dd>
-        Copyright (c) 2016-present, Evan Czaplicki<br>
-        <a href="LICENSE.elm_virtual-dom.txt">全文</a>
+        <a href="LICENSE.elm_compiler.txt">Full Text</a>
       </dd>
 ${list.join('\n')}
       <dt>Clock-Alarm03-01(Loop).mp3</dt>
@@ -93,7 +77,7 @@ ${list.join('\n')}
       <dt>favicon.ico, icon.192.png, icon.512.png</dt>
       <dd>
         Noto Emoji<br>
-        <a href="LICENSE.noto-emoji.txt">全文</a>
+        <a href="LICENSE.noto-emoji.txt">Full Text</a>
       </dd>
     </dl>
   </body>
@@ -101,18 +85,28 @@ ${list.join('\n')}
 `;
 }
 
-function templateList(key, package) {
-    let copyright = '';
-    switch (typeof(package.copyright)) {
-        case 'string':
-            copyright = `        ${package.copyright.replace(/ +/g, ' ')}<br>\n`
-            break;
+function templateList(key, license) {
+    let desc = '';
+    if (typeof(license.copyright) === 'string' && license.copyright) {
+        desc = `        ${license.copyright.replace(/ +/g, ' ')}`;
     }
-    
-    return `      <dt>${key}</dt>
-      <dd>
-${copyright}        <a href="LICENSE.${key.replace('/', '_')}.txt">全文</a>
-      </dd>`;
+
+    if (typeof(license.licenses) === 'string' && license.licenses && !license.licenses.includes('*')) {
+        // '*' means guess
+        if (desc) {
+            desc += '<br>\n';
+        }
+        desc += `        ${license.licenses}`;
+    }
+
+    if (typeof(license.licenseFile) === 'string' && license.licenseFile) {
+        if (desc) {
+            desc += '<br>\n';
+        }
+        desc += `        <a href="LICENSE.${key.replace('/', '_')}.txt">Full Text</a>`;
+    }
+
+    return `      <dt>${key}</dt>` + (desc ? `\n      <dd>\n${desc}\n      </dd>` : '');
 }
 
 function copyLicenseFile(key, package) {
@@ -120,14 +114,12 @@ function copyLicenseFile(key, package) {
     if (fs.existsSync(licenseFile)) {
         fs.unlinkSync(licenseFile);
     }
-    fs.copyFileSync(package.licenseFile, licenseFile);
+    if (package.licenseFile) {
+        fs.copyFileSync(package.licenseFile, licenseFile);
+    }
 }
 
-function checkerThen(err, packages) {
-    if (err) {
-        console.log(err);
-        process.exit(1);
-    }
+function checkerThen(packages) {
     for (key in packages) {
         copyLicenseFile(key, packages[key]);
     }

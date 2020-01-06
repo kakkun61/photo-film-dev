@@ -3,6 +3,7 @@
     "elm-analyse": "*",
     "elm-format": "*",
     "elm-hot": "*",
+    "elm-license-checker": "*",
     "http-server": "*",
     "license-checker": "*",
     "node-elm-compiler": "*",
