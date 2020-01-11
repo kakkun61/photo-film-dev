@@ -2,7 +2,6 @@
 dist
 node_modules
 elm-stuff
-package-lock.json
 
 /src/LICENSE*
 !/src/LICENSE.html
