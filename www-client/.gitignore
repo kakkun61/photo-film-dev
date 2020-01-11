@@ -3,3 +3,8 @@ dist
 node_modules
 elm-stuff
 package-lock.json
+
+/src/LICENSE*
+!/src/LICENSE.html
+!/src/LICENSE.elm_compiler.txt
+!/src/LICENSE.noto-emoji.txt
