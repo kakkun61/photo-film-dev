@@ -1,26 +1,13 @@
-Task Setup -depends MdcSetup {
+Task Setup {
     Exec { npm install }
 }
 
-Task MdcSetup {
-    Exec {
-        git submodule update --init
-        Push-Location .\elm-mdc
-        npm install
-        Pop-Location
-    }
-}
-
 Task MdcBuild {
-    Exec {
-        Push-Location .\elm-mdc
-        npm run build
-        Pop-Location
-    }
+    Exec { npm explore elm-mdc -- npm run build }
 }
 
 Task DevServer {
-    Exec { & "$(npm bin)\parcel.ps1" -- .\src\index.html .\src\credit.html}
+    Exec { & "$(npm bin)\parcel.ps1" -- .\src\index.html .\src\credit.html }
 }
 
 Task Format {

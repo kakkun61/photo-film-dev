@@ -1,5 +1,9 @@
 {
   "devDependencies": {
+    "babel": "^6.23.0",
+    "babel-loader": "^7.1.5",
+    "babel-plugin-transform-es2015-arrow-functions": "^6.22.0",
+    "babel-preset-env": "^1.7.0",
     "elm-analyse": "*",
     "elm-format": "*",
     "elm-hot": "*",
@@ -7,7 +11,9 @@
     "http-server": "*",
     "license-checker": "*",
     "node-elm-compiler": "*",
-    "parcel-bundler": "*"
+    "parcel-bundler": "*",
+    "webpack": "^4.30.0",
+    "webpack-cli": "^3.3.10"
   },
   "dependencies": {
     "elm-mdc": "file:elm-mdc",
