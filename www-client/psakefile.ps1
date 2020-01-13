@@ -7,11 +7,11 @@ Task MdcBuild {
 }
 
 Task DevServer {
-    Exec { & "$(npm bin)\parcel.ps1" -- .\src\index.html .\src\credit.html }
+    Exec { npx parcel .\src\index.html .\src\credit.html }
 }
 
 Task Format {
-    Exec { Get-ChildItem -Path src -Include *.elm -Recurse | ForEach-Object { & "$(npm bin)\elm-format.ps1" -- --yes $_ } }
+    Exec { Get-ChildItem -Path src -Include *.elm -Recurse | ForEach-Object { npx elm-format --yes $_ } }
 }
 
 Task CreditBuild {
@@ -20,13 +20,13 @@ Task CreditBuild {
 
 Task Build -depends MdcBuild, CreditBuild {
     Exec {
-        & "$(npm bin)\parcel.ps1" -- build -d dist .\src\index.html .\src\credit.html
+        npx parcel build -d dist .\src\index.html .\src\credit.html
         git rev-parse HEAD | Out-File .\dist\revision
     }
 }
 
 Task Server {
-    Exec { & "$(npm bin)\http-server.ps1" -- dist }
+    Exec { npx http-server -- dist }
 }
 
 Task Clean {
