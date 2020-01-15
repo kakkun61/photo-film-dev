@@ -631,11 +631,9 @@ view model =
                     Mdc
                     "top-app-bar"
                     model.mdc
-                    []
+                    [ TopAppBar.fixed ]
                     [ TopAppBar.section
-                        [ TopAppBar.alignStart
-                        , TopAppBar.fixed
-                        ]
+                        [ TopAppBar.alignStart ]
                         [ TopAppBar.navigationIcon
                             Mdc
                             "menu"
@@ -778,7 +776,7 @@ view model =
                             "reset"
                             model.mdc
                             [ Options.onClick InitMsg ]
-                            "undo"
+                            "replay"
                         ]
                     ]
                 , Options.styled
