@@ -110,7 +110,7 @@ function templateList(key, license) {
 }
 
 function copyLicenseFile(key, package) {
-    const licenseFile = 'src/LICENSE.' + key.replace('/', '_') + '.txt';
+    const licenseFile = 'intermediate/LICENSE.' + key.replace('/', '_') + '.txt';
     if (fs.existsSync(licenseFile)) {
         fs.unlinkSync(licenseFile);
     }
@@ -123,7 +123,7 @@ function checkerThen(packages) {
     for (key in packages) {
         copyLicenseFile(key, packages[key]);
     }
-    const creditFile = 'src/credit.html';
+    const creditFile = 'intermediate/credit.html';
     fs.writeFileSync(creditFile + 'tmp', template(packages));
     if (fs.existsSync(creditFile)) {
         fs.unlinkSync(creditFile);

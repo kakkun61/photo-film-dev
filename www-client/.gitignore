@@ -3,8 +3,4 @@ dist
 node_modules
 elm-stuff
 
-/src/LICENSE*
-!/src/LICENSE.html
-!/src/LICENSE.elm_compiler.txt
-!/src/LICENSE.noto-emoji.txt
-/src/credit.html
+intermediate
