@@ -7,3 +7,4 @@ elm-stuff
 !/src/LICENSE.html
 !/src/LICENSE.elm_compiler.txt
 !/src/LICENSE.noto-emoji.txt
+/src/credit.html
