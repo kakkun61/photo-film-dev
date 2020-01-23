@@ -2,7 +2,7 @@ PWSH = pwsh
 
 SRC_FILES = $(foreach file,$(wildcard src/*),$(notdir $(file)))
 
-dist: node_modules elm-mdc/material-components-web.css elm-mdc/elm-mdc.js $(foreach file,$(SRC_FILES),intermediate/$(file))
+dist: node_modules elm-mdc/material-components-web.css elm-mdc/elm-mdc.js intermediate/credit.html $(foreach file,$(SRC_FILES),intermediate/$(file))
 	npx parcel build -d dist .\intermediate\index.html .\intermediate\credit.html
 	$(PWSH) -Command "& { git rev-parse HEAD | Out-File .\dist\revision }"
 
