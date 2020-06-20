@@ -1,9 +1,10 @@
 PWSH = pwsh
 
 SRC_FILES = $(foreach file,$(wildcard src/*),$(notdir $(file)))
+INTERMEDIATE_FILES = $(foreach file,$(SRC_FILES),intermediate/$(file))
 
-dist: node_modules elm-mdc/material-components-web.css elm-mdc/elm-mdc.js intermediate/credit.html $(foreach file,$(SRC_FILES),intermediate/$(file))
-	npx parcel build -d dist .\intermediate\index.html .\intermediate\credit.html
+dist: node_modules elm-mdc/material-components-web.css elm-mdc/elm-mdc.js intermediate/credit.html $(INTERMEDIATE_FILES)
+	npx parcel build -d dist intermediate/index.html intermediate/credit.html
 	$(PWSH) -Command "& { git rev-parse HEAD | Out-File .\dist\revision }"
 
 node_modules: package.json package-lock.json elm-mdc/package.json elm-mdc/package-lock.json
@@ -25,7 +26,7 @@ elm-mdc/elm-mdc.js: node_modules elm-mdc/src/elm-mdc.js elm-mdc/webpack.config.j
 intermediate:
 	$(PWSH) -Command "& { New-Item -Type Directory .\intermediate }"
 
-intermediate/credit.html: node_modules dev/credit.js
+intermediate/credit.html: node_modules dev/credit.js | intermediate
 	node dev/credit.js
 
 intermediate/%: src/% | intermediate
@@ -36,8 +37,8 @@ format:
 	$(PWSH) -Command "& { Get-ChildItem -Path src -Include *.elm -Recurse | ForEach-Object { npx elm-format --yes $$_ } }"
 
 .PHONY: devserver
-devserver:
-	npx parcel .\intermediate\index.html .\intermediate\credit.html
+devserver: intermediate/credit.html $(INTERMEDIATE_FILES)
+	npx parcel intermediate/index.html intermediate/credit.html
 
 .PHONY: server
 server: dist
@@ -51,11 +52,10 @@ clean:
 clean-full: clean
 	- $(PWSH) -Command "& { Remove-Item -Recurse -Force -Path .\.cache, .\elm-stuff, .\node_modules, .\elm-mdc\node_modules -ErrorAction Ignore }"
 
-pages-path=..\..\photo-film-dev-pages
+pages-path=../../photo-film-dev-pages
 
 .PHONY: gh-pages
 gh-pages: $(pages-path)
-	echo $(pages-path)
 	$(PWSH) -Command "& {\
 		Copy-Item -Recurse -Force .\dist\* $(pages-path);\
 		Push-Location $(pages-path);\
