@@ -1,0 +1,6 @@
+{
+  "excludedPaths": [
+      "elm-mdc/src"
+  ],
+  "elmFormatPath": "./node_modules/.bin/elm-format"
+}

@@ -1,0 +1,22 @@
+root = true
+
+[*]
+end_of_line = lf
+insert_final_newline = true
+charset = utf-8
+indent_style = space
+
+[*.elm]
+indent_size = 4
+
+[elm.json]
+indent_size = 4
+
+[*.{js,ts}]
+indent_size = 2
+
+[package.json]
+indent_size = 2
+
+[Makefile]
+indent_style = tab

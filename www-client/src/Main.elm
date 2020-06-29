@@ -1,9 +1,15 @@
-port module Main exposing (..)
+module Main exposing (..)
 
+import Array
 import Browser
+import Cmd
+import Dict exposing (Dict)
 import Html exposing (..)
 import Html.Attributes as A exposing (..)
 import Html.Events exposing (..)
+import Json.Decode as Decode
+import Json.Encode as Encode
+import Keyboard.Event exposing (decodeKeyCode)
 import List
 import Material
 import Material.Button as Button
@@ -14,1035 +20,152 @@ import Material.List as UiList
 import Material.Options as Options
 import Material.TextField as TextField
 import Material.TopAppBar as TopAppBar
+import Model exposing (..)
+import Model.RunStep as RunStep
+import Model.Step as Step
+import Msg exposing (Msg)
+import Msg.Error
+import Msg.Input as Input
+import Random
+import Result
 import String
+import Sub
+import Text exposing (Language(..))
 import Time
-
-
-port playAlarm : () -> Cmd msg
-
-
-port stopAlarm : () -> Cmd msg
-
-
-port alert : String -> Cmd msg
-
-
-port setNoSleep : Bool -> Cmd msg
-
-
-type alias TimeSpan =
-    Int
-
-
-type alias TimeSpans =
-    { soak : TimeSpan
-    , dev : TimeSpan
-    , stop : TimeSpan
-    , fix : TimeSpan
-    , rinse : TimeSpan
-    , wet : TimeSpan
-    }
-
-
-type Page
-    = SetPage
-    | RunPage RunStep
-
-
-type RunStep
-    = SoakStep
-    | DevStep
-    | StopStep
-    | FixStep
-    | RinseStep
-    | WetStep
-    | EndStep
-
-
-type RunState
-    = RunState
-    | PauseState
-
-
-type alias TimeInput =
-    { minutes : String, seconds : String }
-
-
-type alias Input =
-    { soak : TimeInput
-    , dev : TimeInput
-    , stop : TimeInput
-    , fix : TimeInput
-    , rinse : TimeInput
-    , wet : TimeInput
-    }
-
-
-type alias Model =
-    { appModel : AppModel, drawerOpen : Bool, mdc : Material.Model Msg }
-
-
-type AppModel
-    = SetModel { input : Input }
-    | RunModel { timeSpans : TimeSpans, state : RunState, step : RunStep, rest : TimeSpans }
-
-
-type EventSource
-    = SoakMinutesSource
-    | SoakSecondsSource
-    | DevMinutesSource
-    | DevSecondsSource
-    | StopMinutesSource
-    | StopSecondsSource
-    | FixMinutesSource
-    | FixSecondsSource
-    | RinseMinutesSource
-    | RinseSecondsSource
-    | WetMinutesSource
-    | WetSecondsSource
-    | IntervalMinutesSource
-    | IntervalSecondsSource
-
-
-type Msg
-    = Mdc (Material.Msg Msg)
-    | GoRunMsg
-    | GoSetMsg
-    | SetMsg EventSource String
-    | TickMsg Time.Posix
-    | NextMsg
-    | RestartMsg
-    | PauseMsg
-    | InitMsg
-    | OpenDrawerMsg
-    | CloseDrawerMsg
-
-
-fromSecondsToMinutesSeconds : TimeSpan -> { sign : String, minutes : Int, seconds : Int }
-fromSecondsToMinutesSeconds secs =
-    if secs < 0 then
-        let
-            secs_ =
-                -1 * secs
-        in
-        { sign = "-", minutes = secs_ // 60, seconds = modBy 60 secs_ }
-
-    else
-        { sign = "", minutes = secs // 60, seconds = modBy 60 secs }
-
-
-fromTimeSpansToInput : TimeSpans -> Input
-fromTimeSpansToInput timeSpans =
-    { soak =
-        let
-            { minutes, seconds } =
-                fromSecondsToMinutesSeconds timeSpans.soak
-        in
-        { minutes = String.fromInt minutes, seconds = String.fromInt seconds }
-    , dev =
-        let
-            { minutes, seconds } =
-                fromSecondsToMinutesSeconds timeSpans.dev
-        in
-        { minutes = String.fromInt minutes, seconds = String.fromInt seconds }
-    , stop =
-        let
-            { minutes, seconds } =
-                fromSecondsToMinutesSeconds timeSpans.stop
-        in
-        { minutes = String.fromInt minutes, seconds = String.fromInt seconds }
-    , fix =
-        let
-            { minutes, seconds } =
-                fromSecondsToMinutesSeconds timeSpans.fix
-        in
-        { minutes = String.fromInt minutes, seconds = String.fromInt seconds }
-    , rinse =
-        let
-            { minutes, seconds } =
-                fromSecondsToMinutesSeconds timeSpans.rinse
-        in
-        { minutes = String.fromInt minutes, seconds = String.fromInt seconds }
-    , wet =
-        let
-            { minutes, seconds } =
-                fromSecondsToMinutesSeconds timeSpans.wet
-        in
-        { minutes = String.fromInt minutes, seconds = String.fromInt seconds }
-    }
-
-
-fromInputToTimeSpans : Input -> Maybe TimeSpans
-fromInputToTimeSpans input =
-    case List.map String.toInt [ input.soak.minutes, input.soak.seconds, input.dev.minutes, input.dev.seconds, input.stop.minutes, input.stop.seconds, input.fix.minutes, input.fix.seconds, input.rinse.minutes, input.rinse.seconds, input.wet.minutes, input.wet.seconds ] of
-        [ Just skm, Just sks, Just dvm, Just dvs, Just stm, Just sts, Just fxm, Just fxs, Just rsm, Just rss, Just wtm, Just wts ] ->
-            Just
-                { soak = 60 * skm + sks
-                , dev = 60 * dvm + dvs
-                , stop = 60 * stm + sts
-                , fix = 60 * fxm + fxs
-                , rinse = 60 * rsm + rss
-                , wet = 60 * wtm + wts
-                }
-
-        _ ->
-            Nothing
-
-
-stepOrder : RunStep -> RunStep -> Order
-stepOrder s0 s1 =
-    case ( s0, s1 ) of
-        ( SoakStep, SoakStep ) ->
-            EQ
-
-        ( SoakStep, _ ) ->
-            LT
-
-        ( DevStep, SoakStep ) ->
-            GT
-
-        ( DevStep, DevStep ) ->
-            EQ
-
-        ( DevStep, _ ) ->
-            LT
-
-        ( StopStep, SoakStep ) ->
-            GT
-
-        ( StopStep, DevStep ) ->
-            GT
-
-        ( StopStep, StopStep ) ->
-            EQ
-
-        ( StopStep, _ ) ->
-            LT
-
-        ( FixStep, FixStep ) ->
-            EQ
-
-        ( FixStep, RinseStep ) ->
-            LT
-
-        ( FixStep, WetStep ) ->
-            LT
-
-        ( FixStep, EndStep ) ->
-            LT
-
-        ( FixStep, _ ) ->
-            GT
-
-        ( RinseStep, RinseStep ) ->
-            EQ
-
-        ( RinseStep, WetStep ) ->
-            LT
-
-        ( RinseStep, EndStep ) ->
-            LT
-
-        ( RinseStep, _ ) ->
-            GT
-
-        ( WetStep, WetStep ) ->
-            EQ
-
-        ( WetStep, EndStep ) ->
-            LT
-
-        ( WetStep, _ ) ->
-            GT
-
-        ( EndStep, EndStep ) ->
-            EQ
-
-        ( EndStep, _ ) ->
-            GT
-
-
-nextStep : RunStep -> RunStep
-nextStep step =
-    case step of
-        SoakStep ->
-            DevStep
-
-        DevStep ->
-            StopStep
-
-        StopStep ->
-            FixStep
-
-        FixStep ->
-            RinseStep
-
-        RinseStep ->
-            WetStep
-
-        WetStep ->
-            EndStep
-
-        EndStep ->
-            EndStep
+import UUID exposing (UUID)
+import Update exposing (nameTextField)
+import View
 
 
 main =
     Browser.element { init = init, update = update, view = view, subscriptions = subscriptions }
 
 
-init : {} -> ( Model, Cmd Msg )
-init {} =
-    let
-        timeSpans =
-            { soak = 30
-            , dev = 5 * 60
-            , stop = 2 * 60
-            , fix = 10 * 60
-            , rinse = 5 * 60
-            , wet = 30
-            }
-    in
-    ( { mdc = Material.defaultModel, appModel = SetModel { input = fromTimeSpansToInput timeSpans }, drawerOpen = False }
-    , Material.init Mdc
+init : { seed : Int } -> ( Model Msg, Cmd Msg )
+init { seed } =
+    ( { mdc = Material.defaultModel
+      , appModel =
+            EditModel
+                { nameTextFieldOpen = False
+                , drawerOpen = False
+                , logInDialogOpen = False
+                , loadingProgressOpen = False
+                , logInDialogSelected = Nothing
+                }
+      , loggedIn = NotLoggedIn initialTimeInputs
+      , seed = Random.initialSeed seed
+      , lang = Japanese
+      }
+    , Cmd.batch [ Cmd.getUser, Material.init Msg.Mdc ]
     )
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model Msg -> ( Model Msg, Cmd Msg )
 update msg model =
     case msg of
-        Mdc msg_ ->
-            Material.update Mdc msg_ model
+        Msg.Mdc mdcMsg ->
+            Material.update Msg.Mdc mdcMsg model
 
-        OpenDrawerMsg ->
-            ( { model | drawerOpen = True }, Cmd.none )
+        Msg.Drawer visible ->
+            Update.drawer visible model
 
-        CloseDrawerMsg ->
-            ( { model | drawerOpen = False }, Cmd.none )
+        Msg.NewRecipe ->
+            Update.newRecipe model
 
-        _ ->
-            let
-                appModel =
-                    model.appModel
-            in
-            case ( msg, appModel ) of
-                ( Mdc msg_, _ ) ->
-                    Material.update Mdc msg_ model
+        Msg.SelectRecipe recipe ->
+            Update.selectRecipe recipe model
 
-                ( GoRunMsg, SetModel { input } ) ->
-                    case fromInputToTimeSpans input of
-                        Just timeSpans ->
-                            ( { model
-                                | appModel =
-                                    RunModel
-                                        { timeSpans = timeSpans
-                                        , state = RunState
-                                        , step = SoakStep
-                                        , rest = timeSpans
-                                        }
-                              }
-                            , setNoSleep True
-                            )
+        Msg.NameTextField visible ->
+            Update.nameTextField visible model
 
-                        Nothing ->
-                            ( model, alert "数字のみを入力してください" )
+        Msg.GoRun ->
+            Update.goRun model
 
-                ( TickMsg _, RunModel runModel ) ->
-                    let
-                        { timeSpans, step, rest } =
-                            runModel
-                    in
-                    case step of
-                        SoakStep ->
-                            let
-                                rest1 =
-                                    rest.soak - 1
+        Msg.Tick _ ->
+            Update.tick model
 
-                                rest_ =
-                                    { rest | soak = rest1 }
-                            in
-                            ( { model | appModel = RunModel { runModel | rest = rest_ } }
-                            , if rest1 == 0 then
-                                playAlarm ()
+        Msg.Next ->
+            Update.next model
 
-                              else
-                                Cmd.none
-                            )
+        Msg.GoEdit ->
+            Update.goEdit model
 
-                        DevStep ->
-                            let
-                                rest1 =
-                                    rest.dev - 1
+        Msg.Pause ->
+            Update.pause model
 
-                                rest_ =
-                                    { rest | dev = rest1 }
-                            in
-                            ( { model | appModel = RunModel { runModel | rest = rest_ } }
-                            , if rest1 == 0 then
-                                playAlarm ()
+        Msg.Restart ->
+            Update.restart model
 
-                              else
-                                Cmd.none
-                            )
+        Msg.Init ->
+            Update.init model
 
-                        StopStep ->
-                            let
-                                rest1 =
-                                    rest.stop - 1
+        Msg.Input Input.Name value ->
+            Update.inputName value model
 
-                                rest_ =
-                                    { rest | stop = rest1 }
-                            in
-                            ( { model | appModel = RunModel { runModel | rest = rest_ } }
-                            , if rest1 == 0 then
-                                playAlarm ()
+        Msg.Input (Input.Time step timeHand) value ->
+            Update.inputTime step timeHand value model
 
-                              else
-                                Cmd.none
-                            )
+        Msg.LogIn provider ->
+            Update.logIn provider model
 
-                        FixStep ->
-                            let
-                                rest1 =
-                                    rest.fix - 1
+        Msg.LogOut ->
+            Update.logOut model
 
-                                rest_ =
-                                    { rest | fix = rest1 }
-                            in
-                            ( { model | appModel = RunModel { runModel | rest = rest_ } }
-                            , if rest1 == 0 then
-                                playAlarm ()
+        Msg.UserChanged user ->
+            Update.loggedIn user model
 
-                              else
-                                Cmd.none
-                            )
+        Msg.LogInDialog visible ->
+            Update.logInDialog visible model
 
-                        RinseStep ->
-                            let
-                                rest1 =
-                                    rest.rinse - 1
+        Msg.SelectLogInDialogListItem selected ->
+            Update.logInDialogList selected model
 
-                                rest_ =
-                                    { rest | rinse = rest1 }
-                            in
-                            ( { model | appModel = RunModel { runModel | rest = rest_ } }
-                            , if rest1 == 0 then
-                                playAlarm ()
+        Msg.RecipesChanged recipes ->
+            Update.recipesChanged recipes model
 
-                              else
-                                Cmd.none
-                            )
-
-                        WetStep ->
-                            let
-                                rest1 =
-                                    rest.wet - 1
-
-                                rest_ =
-                                    { rest | wet = rest1 }
-                            in
-                            ( { model | appModel = RunModel { runModel | rest = rest_ } }
-                            , if rest1 == 0 then
-                                playAlarm ()
-
-                              else
-                                Cmd.none
-                            )
-
-                        EndStep ->
-                            ( model, Cmd.none )
-
-                ( NextMsg, RunModel runModel ) ->
-                    let
-                        step_ =
-                            nextStep runModel.step
-                    in
-                    case step_ of
-                        EndStep ->
-                            ( { model | appModel = RunModel { runModel | step = step_, state = PauseState } }, Cmd.batch [ stopAlarm (), setNoSleep False ] )
-
-                        _ ->
-                            ( { model | appModel = RunModel { runModel | step = step_, state = RunState } }, Cmd.batch [ stopAlarm (), setNoSleep True ] )
-
-                ( GoSetMsg, RunModel { timeSpans } ) ->
-                    ( { model | appModel = SetModel { input = fromTimeSpansToInput timeSpans } }, Cmd.batch [ stopAlarm (), setNoSleep False ] )
-
-                ( PauseMsg, RunModel runModel ) ->
-                    ( { model | appModel = RunModel { runModel | state = PauseState } }, Cmd.batch [ stopAlarm (), setNoSleep False ] )
-
-                ( RestartMsg, RunModel runModel ) ->
-                    case runModel.step of
-                        EndStep ->
-                            ( model, Cmd.none )
-
-                        _ ->
-                            ( { model | appModel = RunModel { runModel | state = RunState } }, setNoSleep True )
-
-                ( InitMsg, RunModel runModel ) ->
-                    let
-                        spans =
-                            runModel.timeSpans
-                    in
-                    ( { model | appModel = RunModel { runModel | state = PauseState, rest = spans, step = SoakStep } }, Cmd.batch [ stopAlarm (), setNoSleep False ] )
-
-                ( SetMsg SoakMinutesSource value, SetModel { input } ) ->
-                    let
-                        timeInput =
-                            input.soak
-                    in
-                    ( { model | appModel = SetModel { input = { input | soak = { timeInput | minutes = value } } } }, Cmd.none )
-
-                ( SetMsg SoakSecondsSource value, SetModel { input } ) ->
-                    let
-                        timeInput =
-                            input.soak
-                    in
-                    ( { model | appModel = SetModel { input = { input | soak = { timeInput | seconds = value } } } }, Cmd.none )
-
-                ( SetMsg DevMinutesSource value, SetModel { input } ) ->
-                    let
-                        timeInput =
-                            input.dev
-                    in
-                    ( { model | appModel = SetModel { input = { input | dev = { timeInput | minutes = value } } } }, Cmd.none )
-
-                ( SetMsg DevSecondsSource value, SetModel { input } ) ->
-                    let
-                        timeInput =
-                            input.dev
-                    in
-                    ( { model | appModel = SetModel { input = { input | dev = { timeInput | seconds = value } } } }, Cmd.none )
-
-                ( SetMsg StopMinutesSource value, SetModel { input } ) ->
-                    let
-                        timeInput =
-                            input.stop
-                    in
-                    ( { model | appModel = SetModel { input = { input | stop = { timeInput | minutes = value } } } }, Cmd.none )
-
-                ( SetMsg StopSecondsSource value, SetModel { input } ) ->
-                    let
-                        timeInput =
-                            input.stop
-                    in
-                    ( { model | appModel = SetModel { input = { input | stop = { timeInput | seconds = value } } } }, Cmd.none )
-
-                ( SetMsg FixMinutesSource value, SetModel { input } ) ->
-                    let
-                        timeInput =
-                            input.fix
-                    in
-                    ( { model | appModel = SetModel { input = { input | fix = { timeInput | minutes = value } } } }, Cmd.none )
-
-                ( SetMsg FixSecondsSource value, SetModel { input } ) ->
-                    let
-                        timeInput =
-                            input.fix
-                    in
-                    ( { model | appModel = SetModel { input = { input | fix = { timeInput | seconds = value } } } }, Cmd.none )
-
-                ( SetMsg RinseMinutesSource value, SetModel { input } ) ->
-                    let
-                        timeInput =
-                            input.rinse
-                    in
-                    ( { model | appModel = SetModel { input = { input | rinse = { timeInput | minutes = value } } } }, Cmd.none )
-
-                ( SetMsg RinseSecondsSource value, SetModel { input } ) ->
-                    let
-                        timeInput =
-                            input.rinse
-                    in
-                    ( { model | appModel = SetModel { input = { input | rinse = { timeInput | seconds = value } } } }, Cmd.none )
-
-                ( SetMsg WetMinutesSource value, SetModel { input } ) ->
-                    let
-                        timeInput =
-                            input.wet
-                    in
-                    ( { model | appModel = SetModel { input = { input | wet = { timeInput | minutes = value } } } }, Cmd.none )
-
-                ( SetMsg WetSecondsSource value, SetModel { input } ) ->
-                    let
-                        timeInput =
-                            input.wet
-                    in
-                    ( { model | appModel = SetModel { input = { input | wet = { timeInput | seconds = value } } } }, Cmd.none )
-
-                _ ->
-                    ( model, alert "unexpected: update" )
+        Msg.Error err ->
+            Update.error err model
 
 
-subscriptions : Model -> Sub Msg
+subscriptions : Model Msg -> Sub Msg
 subscriptions model =
     let
         appModel =
             model.appModel
     in
     case appModel of
-        SetModel _ ->
-            Material.subscriptions Mdc model
+        EditModel _ ->
+            Sub.batch
+                [ Material.subscriptions Msg.Mdc model
+                , Sub.changeUser Msg.UserChanged
+                , Sub.changeRecipes (Msg.Error << Msg.Error.RecipeDecoder) Msg.RecipesChanged
+                , Sub.error (Msg.Error << Msg.Error.Foreign)
+                ]
 
         RunModel { state } ->
             case state of
                 RunState ->
                     Sub.batch
-                        [ Time.every 1000 TickMsg
-                        , Material.subscriptions Mdc model
+                        [ Time.every 1000 Msg.Tick
+                        , Material.subscriptions Msg.Mdc model
+                        , Sub.error (Msg.Error << Msg.Error.Foreign)
                         ]
 
                 PauseState ->
-                    Material.subscriptions Mdc model
+                    Sub.batch
+                        [ Material.subscriptions Msg.Mdc model
+                        , Sub.error (Msg.Error << Msg.Error.Foreign)
+                        ]
 
 
-stepClass : Order -> String
-stepClass order =
-    case order of
-        LT ->
-            "step-yet"
-
-        EQ ->
-            "step-current"
-
-        GT ->
-            "step-done"
-
-
-fillZero : String -> String
-fillZero str =
-    if String.length str < 2 then
-        "0" ++ str
-
-    else
-        str
-
-
-view : Model -> Html Msg
+view : Model Msg -> Html Msg
 view model =
-    let
-        appModel =
-            model.appModel
-    in
-    case appModel of
-        SetModel setModel ->
-            div
-                []
-                [ TopAppBar.view
-                    Mdc
-                    "top-app-bar"
-                    model.mdc
-                    [ TopAppBar.fixed ]
-                    [ TopAppBar.section
-                        [ TopAppBar.alignStart ]
-                        [ TopAppBar.navigationIcon
-                            Mdc
-                            "menu"
-                            model.mdc
-                            [ Options.onClick OpenDrawerMsg ]
-                            "menu"
-                        , TopAppBar.title [] [ text "Photo Film Dev" ]
-                        ]
-                    ]
-                , Drawer.view
-                    Mdc
-                    "drawer"
-                    model.mdc
-                    [ Drawer.open |> Options.when model.drawerOpen ]
-                    [ Drawer.content
-                        []
-                        [ UiList.nav
-                            Mdc
-                            "drawer-list"
-                            model.mdc
-                            [ UiList.singleSelection
-                            , UiList.useActivated
-                            ]
-                            [ UiList.a
-                                [ UiList.activated
-                                , Options.attribute (href "/credit.html")
-                                ]
-                                [ UiList.graphicIcon [] "copyright"
-                                , text "クレジット"
-                                ]
-                            ]
-                        ]
-                    ]
-                , Drawer.scrim [ Options.onClick CloseDrawerMsg ] []
-                , Options.styled
-                    div
-                    [ TopAppBar.fixedAdjust ]
-                    [ div
-                        [ class "content" ]
-                        [ table []
-                            [ tbody []
-                                [ tr []
-                                    [ td [ class "label" ] [ text "前浴" ]
-                                    , td [ class "input" ]
-                                        [ input [ type_ "number", A.min "0", A.max "59", value setModel.input.soak.minutes, onInput (SetMsg SoakMinutesSource) ] []
-                                        , text "' "
-                                        , input [ type_ "number", A.min "0", A.max "59", value setModel.input.soak.seconds, onInput (SetMsg SoakSecondsSource) ] []
-                                        ]
-                                    ]
-                                , tr []
-                                    [ td [ class "label" ] [ text "現像" ]
-                                    , td [ class "input" ]
-                                        [ input [ type_ "number", A.min "0", A.max "59", value setModel.input.dev.minutes, onInput (SetMsg DevMinutesSource) ] []
-                                        , text "' "
-                                        , input [ type_ "number", A.min "0", A.max "59", value setModel.input.dev.seconds, onInput (SetMsg DevSecondsSource) ] []
-                                        ]
-                                    ]
-                                , tr []
-                                    [ td [ class "label" ] [ text "停止" ]
-                                    , td [ class "input" ]
-                                        [ input [ type_ "number", A.min "0", A.max "59", value setModel.input.stop.minutes, onInput (SetMsg StopMinutesSource) ] []
-                                        , text "' "
-                                        , input [ type_ "number", A.min "0", A.max "59", value setModel.input.stop.seconds, onInput (SetMsg StopSecondsSource) ] []
-                                        ]
-                                    ]
-                                , tr []
-                                    [ td [ class "label" ] [ text "定着" ]
-                                    , td [ class "input" ]
-                                        [ input [ type_ "number", A.min "0", A.max "59", value setModel.input.fix.minutes, onInput (SetMsg FixMinutesSource) ] []
-                                        , text "' "
-                                        , input [ type_ "number", A.min "0", A.max "59", value setModel.input.fix.seconds, onInput (SetMsg FixSecondsSource) ] []
-                                        ]
-                                    ]
-                                , tr []
-                                    [ td [ class "label" ] [ text "水洗" ]
-                                    , td [ class "input" ]
-                                        [ input [ type_ "number", A.min "0", A.max "59", value setModel.input.rinse.minutes, onInput (SetMsg RinseMinutesSource) ] []
-                                        , text "' "
-                                        , input [ type_ "number", A.min "0", A.max "59", value setModel.input.rinse.seconds, onInput (SetMsg RinseSecondsSource) ] []
-                                        ]
-                                    ]
-                                , tr []
-                                    [ td [ class "label" ] [ text "防滴" ]
-                                    , td [ class "input" ]
-                                        [ input [ type_ "number", A.min "0", A.max "59", value setModel.input.wet.minutes, onInput (SetMsg WetMinutesSource) ] []
-                                        , text "' "
-                                        , input [ type_ "number", A.min "0", A.max "59", value setModel.input.wet.seconds, onInput (SetMsg WetSecondsSource) ] []
-                                        ]
-                                    ]
-                                ]
-                            ]
-                        ]
-                    ]
-                , Fab.view
-                    Mdc
-                    "fab"
-                    model.mdc
-                    [ Fab.ripple
-                    , Fab.icon "play_arrow"
-                    , Options.onClick GoRunMsg
-                    ]
-                    []
-                ]
-
-        RunModel { timeSpans, step, rest, state } ->
-            div
-                []
-                [ TopAppBar.view Mdc
-                    "top-app-bar"
-                    model.mdc
-                    [ TopAppBar.fixed ]
-                    [ TopAppBar.section [ TopAppBar.alignStart ]
-                        [ TopAppBar.navigationIcon
-                            Mdc
-                            "set"
-                            model.mdc
-                            [ Options.onClick GoSetMsg ]
-                            "chevron_left"
-                        , TopAppBar.title [] [ text "Photo Film Dev" ]
-                        ]
-                    , TopAppBar.section [ TopAppBar.alignEnd ]
-                        [ case state of
-                            RunState ->
-                                TopAppBar.actionItem
-                                    Mdc
-                                    "pause"
-                                    model.mdc
-                                    [ Options.onClick PauseMsg ]
-                                    "pause"
-
-                            PauseState ->
-                                TopAppBar.actionItem
-                                    Mdc
-                                    "restart"
-                                    model.mdc
-                                    [ Options.onClick RestartMsg ]
-                                    "play_arrow"
-                        , TopAppBar.actionItem
-                            Mdc
-                            "reset"
-                            model.mdc
-                            [ Options.onClick InitMsg ]
-                            "replay"
-                        ]
-                    ]
-                , Options.styled
-                    div
-                    [ TopAppBar.fixedAdjust ]
-                    [ div
-                        [ class "content" ]
-                        [ table []
-                            [ tbody []
-                                [ let
-                                    order =
-                                        stepOrder step SoakStep
-                                  in
-                                  tr []
-                                    [ td
-                                        [ class <| stepClass order
-                                        , class "label"
-                                        ]
-                                        [ text "前浴" ]
-                                    , let
-                                        { sign, minutes, seconds } =
-                                            fromSecondsToMinutesSeconds rest.soak
-                                      in
-                                      td
-                                        ([ class <| stepClass order
-                                         , class "time"
-                                         ]
-                                            ++ (if sign == "" then
-                                                    [ class "rest-plus" ]
-
-                                                else
-                                                    []
-                                               )
-                                        )
-                                        [ text <| sign ++ String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
-                                        ]
-                                    , td
-                                        [ class <| stepClass order ]
-                                        [ text "/" ]
-                                    , td
-                                        [ class <| stepClass order
-                                        , class "time"
-                                        ]
-                                        [ let
-                                            { minutes, seconds } =
-                                                fromSecondsToMinutesSeconds timeSpans.soak
-                                          in
-                                          text <| String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
-                                        ]
-                                    ]
-                                , let
-                                    order =
-                                        stepOrder step DevStep
-                                  in
-                                  tr []
-                                    [ td
-                                        [ class <| stepClass order
-                                        , class "label"
-                                        ]
-                                        [ text "現像" ]
-                                    , let
-                                        { sign, minutes, seconds } =
-                                            fromSecondsToMinutesSeconds rest.dev
-                                      in
-                                      td
-                                        ([ class <| stepClass order
-                                         , class "time"
-                                         ]
-                                            ++ (if sign == "" then
-                                                    [ class "rest-plus" ]
-
-                                                else
-                                                    []
-                                               )
-                                        )
-                                        [ text <| sign ++ String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
-                                        ]
-                                    , td
-                                        [ class <| stepClass order ]
-                                        [ text "/" ]
-                                    , td
-                                        [ class <| stepClass order
-                                        , class "time"
-                                        ]
-                                        [ let
-                                            { minutes, seconds } =
-                                                fromSecondsToMinutesSeconds timeSpans.dev
-                                          in
-                                          text <| String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
-                                        ]
-                                    ]
-                                , let
-                                    order =
-                                        stepOrder step StopStep
-                                  in
-                                  tr []
-                                    [ td
-                                        [ class <| stepClass order
-                                        , class "label"
-                                        ]
-                                        [ text "停止" ]
-                                    , let
-                                        { sign, minutes, seconds } =
-                                            fromSecondsToMinutesSeconds rest.stop
-                                      in
-                                      td
-                                        ([ class <| stepClass order
-                                         , class "time"
-                                         ]
-                                            ++ (if sign == "" then
-                                                    [ class "rest-plus" ]
-
-                                                else
-                                                    []
-                                               )
-                                        )
-                                        [ text <| sign ++ String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
-                                        ]
-                                    , td
-                                        [ class <| stepClass order ]
-                                        [ text "/" ]
-                                    , td
-                                        [ class <| stepClass order
-                                        , class "time"
-                                        ]
-                                        [ let
-                                            { minutes, seconds } =
-                                                fromSecondsToMinutesSeconds timeSpans.stop
-                                          in
-                                          text <| String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
-                                        ]
-                                    ]
-                                , let
-                                    order =
-                                        stepOrder step FixStep
-                                  in
-                                  tr []
-                                    [ td
-                                        [ class <| stepClass order
-                                        , class "label"
-                                        ]
-                                        [ text "定着" ]
-                                    , let
-                                        { sign, minutes, seconds } =
-                                            fromSecondsToMinutesSeconds rest.fix
-                                      in
-                                      td
-                                        ([ class <| stepClass order
-                                         , class "time"
-                                         ]
-                                            ++ (if sign == "" then
-                                                    [ class "rest-plus" ]
-
-                                                else
-                                                    []
-                                               )
-                                        )
-                                        [ text <| sign ++ String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
-                                        ]
-                                    , td
-                                        [ class <| stepClass order ]
-                                        [ text "/" ]
-                                    , td
-                                        [ class <| stepClass order
-                                        , class "time"
-                                        ]
-                                        [ let
-                                            { minutes, seconds } =
-                                                fromSecondsToMinutesSeconds timeSpans.fix
-                                          in
-                                          text <| String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
-                                        ]
-                                    ]
-                                , let
-                                    order =
-                                        stepOrder step RinseStep
-                                  in
-                                  tr []
-                                    [ td
-                                        [ class <| stepClass order
-                                        , class "label"
-                                        ]
-                                        [ text "水洗" ]
-                                    , let
-                                        { sign, minutes, seconds } =
-                                            fromSecondsToMinutesSeconds rest.rinse
-                                      in
-                                      td
-                                        ([ class <| stepClass order
-                                         , class "time"
-                                         ]
-                                            ++ (if sign == "" then
-                                                    [ class "rest-plus" ]
-
-                                                else
-                                                    []
-                                               )
-                                        )
-                                        [ text <| sign ++ String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
-                                        ]
-                                    , td
-                                        [ class <| stepClass order ]
-                                        [ text "/" ]
-                                    , td
-                                        [ class <| stepClass order
-                                        , class "time"
-                                        ]
-                                        [ let
-                                            { minutes, seconds } =
-                                                fromSecondsToMinutesSeconds timeSpans.rinse
-                                          in
-                                          text <| String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
-                                        ]
-                                    ]
-                                , let
-                                    order =
-                                        stepOrder step WetStep
-                                  in
-                                  tr []
-                                    [ td
-                                        [ class <| stepClass order
-                                        , class "label"
-                                        ]
-                                        [ text "防滴" ]
-                                    , let
-                                        { sign, minutes, seconds } =
-                                            fromSecondsToMinutesSeconds rest.wet
-                                      in
-                                      td
-                                        ([ class <| stepClass order
-                                         , class "time"
-                                         ]
-                                            ++ (if sign == "" then
-                                                    [ class "rest-plus" ]
-
-                                                else
-                                                    []
-                                               )
-                                        )
-                                        [ text <| sign ++ String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
-                                        ]
-                                    , td
-                                        [ class <| stepClass order ]
-                                        [ text "/" ]
-                                    , td
-                                        [ class <| stepClass order
-                                        , class "time"
-                                        ]
-                                        [ let
-                                            { minutes, seconds } =
-                                                fromSecondsToMinutesSeconds timeSpans.wet
-                                          in
-                                          text <| String.fromInt minutes ++ "' " ++ fillZero (String.fromInt seconds)
-                                        ]
-                                    ]
-                                ]
-                            ]
-                        ]
-                    ]
-                , Fab.view
-                    Mdc
-                    "fab"
-                    model.mdc
-                    [ Fab.ripple
-                    , Fab.icon "skip_next"
-                    , Options.onClick NextMsg
-                    ]
-                    []
-                ]
+    div
+        []
+        (View.topAppBar model
+            ++ View.drawer model
+            ++ View.content model
+            ++ View.fab model
+            ++ View.logInDialog model
+            ++ View.loadingProgress model
+        )

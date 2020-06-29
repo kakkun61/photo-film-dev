@@ -59,8 +59,8 @@ function template(packages) {
       <dt>Photo Film Dev</dt>
       <dd>
         岡本和樹 (Kazuki Okamoto)<br>
-        BSD 3-Clause License (Revised)<br>
-        <a href="LICENSE.html">Full Text</a>
+        GNU General Public License<br>
+        <a href="COPYING.html">Full Text</a>
       </dd>
       <dt>elm/compiler</dt>
       <dd>
