@@ -6,6 +6,7 @@ INTERMEDIATE_FILES = $(foreach file,$(SRC_FILES),intermediate/$(file))
 dist: node_modules elm-mdc/material-components-web.css elm-mdc/elm-mdc.js intermediate/credit.html $(INTERMEDIATE_FILES)
 	npx parcel build -d dist intermediate/index.html intermediate/credit.html
 	$(PWSH) -Command "& { git rev-parse HEAD | Out-File .\dist\revision }"
+	$(PWSH) -Command "& { Copy-Item -Force .\intermediate\CNAME .\dist\ }"
 
 node_modules: package.json package-lock.json elm-mdc/package.json elm-mdc/package-lock.json
 	npm install
@@ -69,6 +70,7 @@ pages-path=../../photo-film-dev-pages
 .PHONY: gh-pages
 gh-pages: $(pages-path)
 	$(PWSH) -Command "& {\
+		Remove-Item -Recurse $(pages-path)\*;\
 		Copy-Item -Recurse -Force .\dist\* $(pages-path);\
 		Push-Location $(pages-path);\
 		git add .;\
@@ -77,4 +79,4 @@ gh-pages: $(pages-path)
 	}"
 
 $(pages-path):
-	git worktree add $(pages-path) gh-pages
+	git worktree add -f $(pages-path) gh-pages
