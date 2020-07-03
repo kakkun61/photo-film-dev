@@ -60,31 +60,32 @@ app.ports.logInWithTwitterCmd.subscribe(() => {
 
 let unsubscribeRecipes = undefined;
 
-app.ports.getUserCmd.subscribe(() => {
-  auth.getRedirectResult().then((credential) => {
-    if (credential.user) {
-      const { uid, displayName } = credential.user;
-      const user = { uid: uid, displayName: displayName }
-      app.ports.changeUserSub.send(user);
-      unsubscribeRecipes = firestore.collection('recipes').where('owner', '==', uid).onSnapshot((snapshot) => {
-        const recipes = [];
-        snapshot.forEach((doc) => {
-          recipes.push(doc.data());
-        })
-        app.ports.changeRecipesSub.send(recipes);
-      });
-    }
-  }).catch((error) => {
-    console.log(error);
-    app.ports.errorSub.send(error.toString());
-  });
+auth.onAuthStateChanged((user) => {
+  if (user !== undefined && user) {
+    const { uid, displayName } = user;
+    const elmUser = { uid: uid, displayName: displayName }
+    app.ports.changeUserSub.send(elmUser);
+    unsubscribeRecipes = firestore.collection('recipes').where('owner', '==', uid).onSnapshot((snapshot) => {
+      const recipes = [];
+      snapshot.forEach((doc) => {
+        recipes.push(doc.data());
+      })
+      app.ports.changeRecipesSub.send(recipes);
+    });
+  } else {
+    app.ports.changeUserSub.send(null);
+  }
+});
+
+auth.getRedirectResult().catch((error) => {
+  console.log(error);
+  app.ports.errorSub.send(error.toString());
 });
 
 app.ports.logOutCmd.subscribe(() => {
   unsubscribeRecipes();
-  auth.signOut().then(function() {
-    app.ports.changeUserSub.send(null);
-  }).catch(function(error) {
+  unsubscribeRecipes = undefined;
+  auth.signOut().catch(function(error) {
     console.log(error);
     app.ports.errorSub.send(error);
   });

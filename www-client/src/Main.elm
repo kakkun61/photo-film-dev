@@ -58,7 +58,7 @@ init { seed } =
       , recipeName = ""
       , timeInputs = initialTimeInputs
       }
-    , Cmd.batch [ Cmd.getUser, Material.init Msg.Mdc ]
+    , Material.init Msg.Mdc
     )
 
 

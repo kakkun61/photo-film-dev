@@ -40,11 +40,6 @@ logOut =
     Port.logOutCmd ()
 
 
-getUser : Cmd msg
-getUser =
-    Port.getUserCmd ()
-
-
 setRecipe : Recipe -> Cmd msg
 setRecipe =
     Port.setRecipeCmd << Port.outRecipe

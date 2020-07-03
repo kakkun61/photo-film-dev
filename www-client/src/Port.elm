@@ -28,9 +28,6 @@ port logInWithTwitterCmd : () -> Cmd msg
 port logOutCmd : () -> Cmd msg
 
 
-port getUserCmd : () -> Cmd msg
-
-
 port setRecipeCmd : Recipe -> Cmd msg
 
 
