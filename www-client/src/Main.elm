@@ -24,8 +24,8 @@ import Model exposing (..)
 import Model.RunStep as RunStep
 import Model.Step as Step
 import Msg exposing (Msg)
+import Msg.Component as Component
 import Msg.Error
-import Msg.Input as Input
 import Random
 import Result
 import String
@@ -52,9 +52,11 @@ init { seed } =
                 , loadingProgressOpen = False
                 , logInDialogSelected = Nothing
                 }
-      , loggedIn = NotLoggedIn initialTimeInputs
+      , loggedIn = NotLoggedIn
       , seed = Random.initialSeed seed
       , lang = Japanese
+      , recipeName = ""
+      , timeInputs = initialTimeInputs
       }
     , Cmd.batch [ Cmd.getUser, Material.init Msg.Mdc ]
     )
@@ -99,11 +101,17 @@ update msg model =
         Msg.Init ->
             Update.init model
 
-        Msg.Input Input.Name value ->
+        Msg.Input Component.Name value ->
             Update.inputName value model
 
-        Msg.Input (Input.Time step timeHand) value ->
+        Msg.Change Component.Name value ->
+            Update.changeName value model
+
+        Msg.Input (Component.Time step timeHand) value ->
             Update.inputTime step timeHand value model
+
+        Msg.Change (Component.Time step timeHand) value ->
+            Update.changeTime step timeHand value model
 
         Msg.LogIn provider ->
             Update.logIn provider model

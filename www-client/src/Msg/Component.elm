@@ -1,9 +1,9 @@
-module Msg.Input exposing (..)
+module Msg.Component exposing (..)
 
 import Model exposing (Step)
 import Model.TimeHand exposing (TimeHand)
 
 
-type Input
+type Component
     = Name
     | Time Step TimeHand

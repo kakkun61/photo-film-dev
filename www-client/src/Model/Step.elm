@@ -10,6 +10,28 @@ type Step
     | Wet
 
 
+toString : Step -> String
+toString step =
+    case step of
+        Soak ->
+            "soak"
+
+        Dev ->
+            "dev"
+
+        Stop ->
+            "stop"
+
+        Fix ->
+            "fix"
+
+        Rinse ->
+            "rinse"
+
+        Wet ->
+            "wet"
+
+
 toInt : Step -> Int
 toInt step =
     case step of

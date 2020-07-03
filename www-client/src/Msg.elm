@@ -3,8 +3,8 @@ module Msg exposing (..)
 import Dict exposing (Dict)
 import Material
 import Model exposing (..)
+import Msg.Component
 import Msg.Error
-import Msg.Input
 import Msg.LogIn.Provider
 import Time
 
@@ -13,7 +13,8 @@ type Msg
     = Mdc (Material.Msg Msg)
     | GoRun
     | GoEdit
-    | Input Input String
+    | Input Component String
+    | Change Component String
     | Tick Time.Posix
     | Next
     | Restart
@@ -32,8 +33,8 @@ type Msg
     | Error Error
 
 
-type alias Input =
-    Msg.Input.Input
+type alias Component =
+    Msg.Component.Component
 
 
 type alias LogInProvider =

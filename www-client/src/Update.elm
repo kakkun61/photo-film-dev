@@ -47,8 +47,8 @@ goRun model =
                         |> Maybe.andThen (\recipeId -> Dict.get (UUID.toString recipeId) loggedIn_.recipes)
                         |> Maybe.andThen (Just << .timeInputs)
 
-                NotLoggedIn timeInputs_ ->
-                    Just timeInputs_
+                NotLoggedIn ->
+                    Just model.timeInputs
     in
     case timeInputs of
         Just timeInputs_ ->
@@ -113,29 +113,53 @@ tick model =
 inputName : String -> Model Msg -> ( Model Msg, Cmd Msg )
 inputName name model =
     case model.appModel of
-        EditModel {} ->
+        EditModel editModel ->
+            ( { model | recipeName = name }, Cmd.none )
+
+        _ ->
+            ( model, Cmd.alert "unexpected: Update.inputName" )
+
+
+changeName : String -> Model Msg -> ( Model Msg, Cmd Msg )
+changeName name model =
+    case model.appModel of
+        EditModel _ ->
             let
                 recipe =
                     case model.loggedIn of
                         LoggedIn loggedIn_ ->
                             loggedIn_.recipeId |> Maybe.andThen (\id -> Dict.get (UUID.toString id) loggedIn_.recipes)
 
-                        NotLoggedIn _ ->
+                        NotLoggedIn ->
                             Nothing
             in
             case recipe of
                 Nothing ->
-                    ( model, Cmd.alert "unexpected: Update.input" )
+                    ( model, Cmd.alert "unexpected: Update.changeName" )
 
                 Just recipe_ ->
                     ( model, Cmd.setRecipe { recipe_ | name = name } )
 
         _ ->
-            ( model, Cmd.alert "unexpected: Update.inputName" )
+            ( model, Cmd.alert "unexpected: Update.changeName" )
 
 
 inputTime : Step -> TimeHand -> String -> Model Msg -> ( Model Msg, Cmd Msg )
 inputTime step timeHand value model =
+    case model.appModel of
+        EditModel editModel ->
+            let
+                timeInputs =
+                    model.timeInputs |> Step.set step (model.timeInputs |> Step.get step |> TimeHand.set timeHand value)
+            in
+            ( { model | timeInputs = timeInputs }, Cmd.none )
+
+        _ ->
+            ( model, Cmd.alert "unexpected: Update.inputTime" )
+
+
+changeTime : Step -> TimeHand -> String -> Model Msg -> ( Model Msg, Cmd Msg )
+changeTime step timeHand value model =
     case model.appModel of
         EditModel editModel ->
             let
@@ -151,16 +175,16 @@ inputTime step timeHand value model =
                                     ( model, Cmd.setRecipe { recipe | timeInputs = new recipe.timeInputs } )
 
                                 Nothing ->
-                                    ( model, Cmd.alert "undexpected: Update.inputTime" )
+                                    ( model, Cmd.alert "undexpected: Update.changeTime" )
 
                         Nothing ->
-                            ( model, Cmd.alert "undexpected: Update.inputTime" )
+                            ( model, Cmd.alert "undexpected: Update.changeTime" )
 
-                NotLoggedIn timeInputs ->
-                    ( { model | loggedIn = NotLoggedIn <| new timeInputs }, Cmd.none )
+                NotLoggedIn ->
+                    ( { model | timeInputs = new model.timeInputs }, Cmd.none )
 
         _ ->
-            ( model, Cmd.alert "unexpected: Update.inputTime" )
+            ( model, Cmd.alert "unexpected: Update.changeTime" )
 
 
 newRecipe : Model Msg -> ( Model Msg, Cmd Msg )
@@ -175,7 +199,13 @@ newRecipe model =
                     { id = uuid, name = T.newRecipe model.lang, timeInputs = initialTimeInputs }
 
                 model_ =
-                    { model | loggedIn = LoggedIn { loggedIn_ | recipeId = Just uuid }, appModel = EditModel { editModel | drawerOpen = False }, seed = seed_ }
+                    { model
+                        | loggedIn =
+                            LoggedIn { loggedIn_ | recipeId = Just uuid }
+                        , appModel = EditModel { editModel | drawerOpen = False }
+                        , recipeName = T.newRecipe model.lang
+                        , seed = seed_
+                    }
             in
             ( model_, Cmd.setRecipe recipe )
 
@@ -205,7 +235,18 @@ goEdit : Model Msg -> ( Model Msg, Cmd Msg )
 goEdit model =
     case model.appModel of
         RunModel runModel ->
-            ( { model | appModel = EditModel { nameTextFieldOpen = False, drawerOpen = False, logInDialogOpen = False, loadingProgressOpen = False, logInDialogSelected = Nothing } }, Cmd.batch [ Cmd.stopAlarm, Cmd.setNoSleep False ] )
+            ( { model
+                | appModel =
+                    EditModel
+                        { nameTextFieldOpen = False
+                        , drawerOpen = False
+                        , logInDialogOpen = False
+                        , loadingProgressOpen = False
+                        , logInDialogSelected = Nothing
+                        }
+              }
+            , Cmd.batch [ Cmd.stopAlarm, Cmd.setNoSleep False ]
+            )
 
         _ ->
             ( model, Cmd.alert "unexpected: Update.goEdit" )
@@ -309,7 +350,7 @@ loggedIn user model =
             ( { model | loggedIn = LoggedIn { user = user_, recipeId = Nothing, recipes = Dict.empty } }, Cmd.none )
 
         Nothing ->
-            ( { model | loggedIn = NotLoggedIn initialTimeInputs }, Cmd.none )
+            ( { model | loggedIn = NotLoggedIn }, Cmd.none )
 
 
 recipesChanged : Dict String Recipe -> Model Msg -> ( Model Msg, Cmd Msg )
@@ -318,7 +359,7 @@ recipesChanged recipes model =
         LoggedIn loggedIn_ ->
             ( { model | loggedIn = LoggedIn { loggedIn_ | recipes = recipes } }, Cmd.none )
 
-        NotLoggedIn _ ->
+        NotLoggedIn ->
             ( model, Cmd.alert "unexpected: Update.recipesChanged" )
 
 
@@ -326,7 +367,22 @@ selectRecipe : Recipe -> Model Msg -> ( Model Msg, Cmd Msg )
 selectRecipe recipe model =
     case ( model.loggedIn, model.appModel ) of
         ( LoggedIn loggedIn_, EditModel editModel ) ->
-            ( { model | loggedIn = LoggedIn { loggedIn_ | recipeId = Just recipe.id }, appModel = EditModel { editModel | drawerOpen = False } }, Cmd.none )
+            ( { model
+                | recipeName = recipe.name
+                , timeInputs = recipe.timeInputs
+                , loggedIn =
+                    LoggedIn
+                        { loggedIn_
+                            | recipeId = Just recipe.id
+                        }
+                , appModel =
+                    EditModel
+                        { editModel
+                            | drawerOpen = False
+                        }
+              }
+            , Cmd.none
+            )
 
         _ ->
             ( model, Cmd.alert "unexpected: Update.selectRecipe" )

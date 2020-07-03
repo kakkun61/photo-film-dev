@@ -25,7 +25,7 @@ import Model.Sign as Sign
 import Model.Step as Step
 import Model.TimeHand as TimeHand
 import Msg exposing (Msg)
-import Msg.Input as Input
+import Msg.Component as Component
 import Msg.LogIn.Provider
 import Text as T exposing (Language)
 import UUID
@@ -33,15 +33,6 @@ import UUID
 
 topAppBar : Model Msg -> List (Html Msg)
 topAppBar model =
-    let
-        recipe =
-            case model.loggedIn of
-                LoggedIn loggedIn ->
-                    loggedIn.recipeId |> Maybe.andThen (\id -> Dict.get (UUID.toString id) loggedIn.recipes)
-
-                NotLoggedIn _ ->
-                    Nothing
-    in
     case model.appModel of
         EditModel editModel ->
             [ TopAppBar.view
@@ -52,16 +43,18 @@ topAppBar model =
                 (if editModel.nameTextFieldOpen then
                     [ TopAppBar.section
                         [ Options.css "background-color" "white" ]
-                        [ TextField.view Msg.Mdc
+                        [ TextField.view
+                            Msg.Mdc
                             "edit-name"
                             model.mdc
-                            [ TextField.value <| Maybe.withDefault "" <| Maybe.map .name recipe
+                            [ TextField.value model.recipeName
                             , TextField.trailingIcon "close"
                             , TextField.fullwidth
                             , TextField.autofocus
                             , TextField.onTrailingIconClick <| Msg.NameTextField Msg.Hide
                             , TextField.nativeControl [ Options.css "padding-left" "16px" ]
-                            , Options.onInput <| Msg.Input Input.Name
+                            , Options.onInput <| Msg.Input Component.Name
+                            , Options.onChange <| Msg.Change Component.Name
                             , Options.on "keypress"
                                 (decodeKeyCode
                                     |> Decode.andThen
@@ -90,22 +83,27 @@ topAppBar model =
                             "menu"
                         , TopAppBar.title
                             []
-                            [ text <| Maybe.withDefault (T.title model.lang) <| Maybe.map .name recipe ]
+                            [ text model.recipeName ]
                         ]
                     , TopAppBar.section
                         [ TopAppBar.alignEnd ]
-                        (case recipe of
-                            Nothing ->
+                        (case model.loggedIn of
+                            NotLoggedIn ->
                                 []
 
-                            Just _ ->
-                                [ TopAppBar.actionItem
-                                    Msg.Mdc
-                                    "edit-name"
-                                    model.mdc
-                                    [ Options.onClick <| Msg.NameTextField Msg.Show ]
-                                    "edit"
-                                ]
+                            LoggedIn loggedIn ->
+                                case loggedIn.recipeId of
+                                    Nothing ->
+                                        []
+
+                                    Just _ ->
+                                        [ TopAppBar.actionItem
+                                            Msg.Mdc
+                                            "edit-name"
+                                            model.mdc
+                                            [ Options.onClick <| Msg.NameTextField Msg.Show ]
+                                            "edit"
+                                        ]
                         )
                     ]
                 )
@@ -123,7 +121,7 @@ topAppBar model =
                         model.mdc
                         [ Options.onClick Msg.GoEdit ]
                         "arrow_back"
-                    , TopAppBar.title [] [ text <| Maybe.withDefault (T.title model.lang) <| Maybe.map .name recipe ]
+                    , TopAppBar.title [] [ text model.recipeName ]
                     ]
                 , TopAppBar.section [ TopAppBar.alignEnd ]
                     [ case state of
@@ -182,7 +180,7 @@ drawer model =
                                     LoggedIn loggedIn ->
                                         loggedIn.user.displayName
 
-                                    NotLoggedIn _ ->
+                                    NotLoggedIn ->
                                         T.notLoggedIn model.lang
                             ]
                         , div
@@ -198,7 +196,7 @@ drawer model =
                                         ]
                                         [ text <| T.logOut model.lang ]
 
-                                NotLoggedIn _ ->
+                                NotLoggedIn ->
                                     Button.view
                                         Msg.Mdc
                                         "log-in"
@@ -243,7 +241,7 @@ drawer model =
                                        , UiList.divider [] []
                                        ]
 
-                            NotLoggedIn _ ->
+                            NotLoggedIn ->
                                 []
                          )
                             ++ [ UiList.a
@@ -272,13 +270,11 @@ content model =
                 [ let
                     timeInputs =
                         case model.loggedIn of
-                            LoggedIn loggedIn_ ->
-                                loggedIn_.recipeId
-                                    |> Maybe.andThen (\recipeId -> Dict.get (UUID.toString recipeId) loggedIn_.recipes)
-                                    |> Maybe.andThen (Just << .timeInputs)
+                            LoggedIn loggedIn ->
+                                loggedIn.recipeId |> Maybe.map (\_ -> model.timeInputs)
 
-                            NotLoggedIn timeInputs_ ->
-                                Just timeInputs_
+                            NotLoggedIn ->
+                                Just model.timeInputs
                   in
                   case timeInputs of
                     Just timeInputs_ ->
@@ -286,7 +282,7 @@ content model =
                             [ class "content" ]
                             [ table []
                                 [ tbody [] <|
-                                    List.map (\step -> editContentRow step model.lang timeInputs_) <|
+                                    List.map (\step -> editContentRow step model.lang timeInputs_ model.mdc) <|
                                         Step.range Step.Soak Step.Wet
                                 ]
                             ]
@@ -332,7 +328,7 @@ fab model =
                                 Nothing ->
                                     False
 
-                        NotLoggedIn _ ->
+                        NotLoggedIn ->
                             True
             in
             if show then
@@ -407,8 +403,8 @@ contentRowLabel step lang =
             T.wet lang
 
 
-editContentRow : Step -> Language -> TimeInputs -> Html Msg
-editContentRow rowStep lang timeInputs =
+editContentRow : Step -> Language -> TimeInputs -> Material.Model Msg -> Html Msg
+editContentRow rowStep lang timeInputs mdc =
     let
         label =
             contentRowLabel rowStep
@@ -419,9 +415,34 @@ editContentRow rowStep lang timeInputs =
     tr []
         [ td [ class "label" ] [ text <| label lang ]
         , td [ class "input" ]
-            [ input [ type_ "number", A.min "0", A.max "59", value minutes, onInput (Msg.Input <| Input.Time rowStep TimeHand.Minutes) ] []
+            [ TextField.view
+                Msg.Mdc
+                ("input-" ++ Step.toString rowStep ++ "-minutes")
+                mdc
+                [ Options.cs "input-time"
+                , TextField.type_ "number"
+                , TextField.nativeControl [ Options.attribute <| A.min "0" ]
+                , TextField.value minutes
+                , Options.onInput <| Msg.Input <| Component.Time rowStep TimeHand.Minutes
+                , Options.onChange <| Msg.Change <| Component.Time rowStep TimeHand.Minutes
+                ]
+                []
             , text "' "
-            , input [ type_ "number", A.min "0", A.max "59", value seconds, onInput (Msg.Input <| Input.Time rowStep TimeHand.Seconds) ] []
+            , TextField.view
+                Msg.Mdc
+                ("input-" ++ Step.toString rowStep ++ "-seconds")
+                mdc
+                [ Options.cs "input-time"
+                , TextField.type_ "number"
+                , TextField.nativeControl
+                    [ Options.attribute <| A.min "0"
+                    , Options.attribute <| A.max "59"
+                    ]
+                , TextField.value seconds
+                , Options.onInput <| Msg.Input <| Component.Time rowStep TimeHand.Seconds
+                , Options.onChange <| Msg.Change <| Component.Time rowStep TimeHand.Seconds
+                ]
+                []
             , text "\""
             ]
         ]

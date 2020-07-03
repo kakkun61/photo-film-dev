@@ -33,9 +33,14 @@ tr:first-child > td {
     padding-top: 0;
 }
 
-td > input {
+.input-time {
     width: 2em;
+    font-size: calc(35 * var(--pt));
+}
+
+.input-time > input {
     text-align: end;
+    font-size: calc(35 * var(--pt));
 }
 
 td.label {

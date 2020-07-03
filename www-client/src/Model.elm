@@ -127,6 +127,8 @@ type alias Model msg =
     , loggedIn : LoggedIn
     , seed : Random.Seed
     , lang : Language
+    , recipeName : String
+    , timeInputs : TimeInputs
     , mdc : Material.Model msg
     }
 
@@ -151,7 +153,7 @@ type alias RunModel_ =
 
 type LoggedIn
     = LoggedIn LoggedIn_
-    | NotLoggedIn TimeInputs
+    | NotLoggedIn
 
 
 type alias LoggedIn_ =
