@@ -43,7 +43,7 @@ lint:
 
 .PHONY: lint-server
 lint-server:
-	npx elm-analyse --server
+	npx elm-analyse --serve
 
 .PHONY: devserver
 devserver: clean-cache node_modules elm-mdc/material-components-web.css elm-mdc/elm-mdc.js intermediate/credit.html $(INTERMEDIATE_FILES)
