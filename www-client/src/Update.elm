@@ -1,10 +1,46 @@
-module Update exposing (..)
+module Update exposing
+    ( changeName
+    , changeTime
+    , drawer
+    , error
+    , goEdit
+    , goRun
+    , init
+    , inputName
+    , inputTime
+    , logIn
+    , logInDialog
+    , logInDialogList
+    , logOut
+    , loggedIn
+    , nameTextField
+    , newRecipe
+    , next
+    , pause
+    , recipesChanged
+    , restart
+    , selectRecipe
+    , tick
+    )
 
 import Array
 import Cmd
 import Dict exposing (Dict)
 import Form.Decoder as FD
-import Model exposing (..)
+import Model
+    exposing
+        ( AppModel(..)
+        , LoggedIn(..)
+        , Model
+        , Recipe
+        , RunState(..)
+        , Step
+        , TimeSpanDecodeError(..)
+        , User
+        , fromRunStepToStep
+        , fromTimeInputsToTimeSpans
+        , initialTimeInputs
+        )
 import Model.RunStep as RunStep
 import Model.Step as Step
 import Model.TimeHand as TimeHand exposing (TimeHand)

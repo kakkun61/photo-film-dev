@@ -1,4 +1,4 @@
-module Model.RunStep exposing (..)
+module Model.RunStep exposing (RunStep(..), compare, next)
 
 
 type RunStep

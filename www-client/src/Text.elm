@@ -1,4 +1,26 @@
-module Text exposing (..)
+module Text exposing
+    ( Language(..)
+    , addRecipe
+    , badInput
+    , credit
+    , dev
+    , fix
+    , google
+    , inputNumber
+    , logIn
+    , logOut
+    , newRecipe
+    , noRecipes
+    , notLoggedIn
+    , outOfRange
+    , rinse
+    , soak
+    , stop
+    , title
+    , twitter
+    , wet
+    , whichAuthProvider
+    )
 
 
 type Language
@@ -10,7 +32,7 @@ type alias Text =
 
 
 title : Text
-title lang =
+title _ =
     "Photo Film Dev"
 
 
@@ -99,12 +121,12 @@ whichAuthProvider lang =
 
 
 google : Text
-google lang =
+google _ =
     "Google"
 
 
 twitter : Text
-twitter lang =
+twitter _ =
     "Twitter"
 
 
@@ -115,8 +137,8 @@ newRecipe lang =
             "新規レシピ"
 
 
-noRecipe : Text
-noRecipe lang =
+noRecipes : Text
+noRecipes lang =
     case lang of
         Japanese ->
             "レシピを選択してください"

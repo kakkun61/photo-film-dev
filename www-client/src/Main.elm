@@ -1,48 +1,34 @@
-module Main exposing (..)
+module Main exposing (main)
 
-import Array
 import Browser
-import Cmd
-import Dict exposing (Dict)
-import Html exposing (..)
-import Html.Attributes as A exposing (..)
-import Html.Events exposing (..)
-import Json.Decode as Decode
-import Json.Encode as Encode
-import Keyboard.Event exposing (decodeKeyCode)
-import List
+import Html exposing (Html, div)
 import Material
-import Material.Button as Button
-import Material.Drawer.Modal as Drawer
-import Material.Elevation as Elevation
-import Material.Fab as Fab
-import Material.List as UiList
-import Material.Options as Options
-import Material.TextField as TextField
-import Material.TopAppBar as TopAppBar
-import Model exposing (..)
-import Model.RunStep as RunStep
-import Model.Step as Step
+import Model
+    exposing
+        ( AppModel(..)
+        , LoggedIn(..)
+        , Model
+        , RunState(..)
+        , initialTimeInputs
+        )
 import Msg exposing (Msg)
 import Msg.Component as Component
 import Msg.Error
 import Random
-import Result
-import String
 import Sub
 import Text exposing (Language(..))
 import Time
-import UUID exposing (UUID)
 import Update exposing (nameTextField)
 import View
 
 
+main : Program Int (Model Msg) Msg
 main =
     Browser.element { init = init, update = update, view = view, subscriptions = subscriptions }
 
 
-init : { seed : Int } -> ( Model Msg, Cmd Msg )
-init { seed } =
+init : Int -> ( Model Msg, Cmd Msg )
+init seed =
     ( { mdc = Material.defaultModel
       , appModel =
             EditModel

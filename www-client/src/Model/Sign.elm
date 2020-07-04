@@ -1,4 +1,4 @@
-module Model.Sign exposing (..)
+module Model.Sign exposing (Sign(..), toString)
 
 
 type Sign

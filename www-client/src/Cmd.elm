@@ -1,8 +1,16 @@
-module Cmd exposing (..)
+module Cmd exposing
+    ( alert
+    , logInWithGoogle
+    , logInWithTwitter
+    , logOut
+    , playAlarm
+    , setNoSleep
+    , setRecipe
+    , stopAlarm
+    )
 
 import Model exposing (Recipe)
 import Port
-import UUID
 
 
 playAlarm : Cmd msg

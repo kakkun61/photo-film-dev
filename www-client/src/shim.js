@@ -12,7 +12,7 @@ const noSleep = new NoSleep();
 
 const app = Elm.Main.init({
   node: document.querySelector('main'),
-  flags: { seed: getRandomInt() }
+  flags: getRandomInt()
 });
 
 app.ports.playAlarmCmd.subscribe(() => {

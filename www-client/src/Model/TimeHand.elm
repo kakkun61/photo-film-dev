@@ -1,4 +1,4 @@
-module Model.TimeHand exposing (..)
+module Model.TimeHand exposing (TimeHand(..), get, set)
 
 
 type TimeHand

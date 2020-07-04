@@ -1,8 +1,14 @@
-module Msg exposing (..)
+module Msg exposing
+    ( Component
+    , Error
+    , LogInProvider
+    , Msg(..)
+    , Visible(..)
+    )
 
 import Dict exposing (Dict)
 import Material
-import Model exposing (..)
+import Model exposing (Recipe, User)
 import Msg.Component
 import Msg.Error
 import Msg.LogIn.Provider

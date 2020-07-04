@@ -1,4 +1,4 @@
-module Model.Step exposing (..)
+module Model.Step exposing (Step(..), get, range, set, toString)
 
 
 type Step

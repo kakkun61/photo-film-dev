@@ -1,4 +1,4 @@
-module Msg.LogIn.Provider exposing (..)
+module Msg.LogIn.Provider exposing (Provider(..))
 
 
 type Provider

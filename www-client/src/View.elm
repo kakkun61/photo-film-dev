@@ -1,25 +1,55 @@
-module View exposing (..)
+module View exposing
+    ( content
+    , drawer
+    , fab
+    , loadingProgress
+    , logInDialog
+    , topAppBar
+    )
 
-import Array exposing (Array)
 import Dict
-import Html exposing (..)
-import Html.Attributes as A exposing (..)
-import Html.Events exposing (..)
+import Html
+    exposing
+        ( Html
+        , div
+        , h2
+        , h3
+        , i
+        , p
+        , span
+        , table
+        , tbody
+        , td
+        , text
+        , tr
+        )
+import Html.Attributes as A exposing (class, href, style)
+import Html.Events exposing (onClick)
 import Json.Decode as Decode
-import Json.Encode as Encode
 import Keyboard.Event exposing (decodeKeyCode)
 import Loading
 import Material
 import Material.Button as Button
 import Material.Dialog as Dialog
 import Material.Drawer.Modal as Drawer
-import Material.Elevation as Elevation
 import Material.Fab as Fab
 import Material.List as UiList
 import Material.Options as Options
 import Material.TextField as TextField
 import Material.TopAppBar as TopAppBar
-import Model exposing (..)
+import Model
+    exposing
+        ( AppModel(..)
+        , LoggedIn(..)
+        , Model
+        , RunState(..)
+        , RunStep
+        , Step
+        , TimeInputs
+        , TimeSpans
+        , fromSecondsToMinutesSeconds
+        , fromStepToRunStep
+        )
 import Model.RunStep as RunStep
 import Model.Sign as Sign
 import Model.Step as Step
@@ -109,7 +139,7 @@ topAppBar model =
                 )
             ]
 
-        RunModel { timeSpans, step, rest, state } ->
+        RunModel { state } ->
             [ TopAppBar.view Msg.Mdc
                 "top-app-bar"
                 model.mdc
@@ -222,8 +252,8 @@ drawer model =
                                 List.map
                                     (\( id, recipe ) ->
                                         UiList.li
-                                            ([ Options.onClick <| Msg.SelectRecipe recipe ]
-                                                ++ (if Just id == Maybe.map UUID.toString loggedIn.recipeId then
+                                            ((Options.onClick <| Msg.SelectRecipe recipe)
+                                                :: (if Just id == Maybe.map UUID.toString loggedIn.recipeId then
                                                         [ UiList.activated ]
 
                                                     else
@@ -263,7 +293,7 @@ drawer model =
 content : Model Msg -> List (Html Msg)
 content model =
     case model.appModel of
-        EditModel editModel ->
+        EditModel _ ->
             [ Options.styled
                 div
                 [ TopAppBar.fixedAdjust ]
@@ -290,7 +320,7 @@ content model =
                     Nothing ->
                         div
                             [ class "no-recipe" ]
-                            [ p [] [ text <| T.noRecipe model.lang ] ]
+                            [ p [] [ text <| T.noRecipes model.lang ] ]
                 ]
             ]
 
@@ -449,7 +479,7 @@ editContentRow rowStep lang timeInputs mdc =
 
 
 runContentRow : Step -> Language -> { timeSpans : TimeSpans, state : RunState, step : RunStep, rest : TimeSpans } -> Html Msg
-runContentRow rowStep lang { timeSpans, step, rest, state } =
+runContentRow rowStep lang { timeSpans, step, rest } =
     let
         order =
             RunStep.compare step (fromStepToRunStep rowStep)

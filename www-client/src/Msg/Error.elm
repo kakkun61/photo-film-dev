@@ -1,4 +1,4 @@
-module Msg.Error exposing (..)
+module Msg.Error exposing (Error(..))
 
 import Model exposing (RecipeDecoderError)
 

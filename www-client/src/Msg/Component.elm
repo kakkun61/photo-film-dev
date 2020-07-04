@@ -1,4 +1,4 @@
-module Msg.Component exposing (..)
+module Msg.Component exposing (Component(..))
 
 import Model exposing (Step)
 import Model.TimeHand exposing (TimeHand)

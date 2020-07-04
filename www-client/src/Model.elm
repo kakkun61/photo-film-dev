@@ -1,16 +1,32 @@
-module Model exposing (..)
+module Model exposing
+    ( AppModel(..)
+    , LoggedIn(..)
+    , Model
+    , Recipe
+    , RecipeDecoderError(..)
+    , RunState(..)
+    , RunStep
+    , Step
+    , TimeInputs
+    , TimeSpan
+    , TimeSpanDecodeError(..)
+    , TimeSpans
+    , User
+    , fromRunStepToStep
+    , fromSecondsToMinutesSeconds
+    , fromStepToRunStep
+    , fromTimeInputsToTimeSpans
+    , initialTimeInputs
+    )
 
 import Dict exposing (Dict)
 import Form.Decoder as FD
-import Json.Decode as Decode exposing (Decoder)
-import Json.Encode as Encode
 import Material
 import Model.RunStep as RunStep
 import Model.Sign as Sign
 import Model.Step as Step
 import Random
 import Text exposing (Language)
-import Time
 import UUID exposing (UUID)
 
 
@@ -148,7 +164,11 @@ type alias EditModel_ =
 
 
 type alias RunModel_ =
-    { timeSpans : TimeSpans, state : RunState, step : RunStep, rest : TimeSpans }
+    { timeSpans : TimeSpans
+    , state : RunState
+    , step : RunStep
+    , rest : TimeSpans
+    }
 
 
 type LoggedIn
@@ -184,19 +204,6 @@ fromSecondsToMinutesSeconds secs =
 
     else
         { sign = Sign.Plus, minutes = secs // 60, seconds = modBy 60 secs }
-
-
-fromTimeSpansToTimeInputs : TimeSpans -> TimeInputs
-fromTimeSpansToTimeInputs spans =
-    let
-        conv span =
-            let
-                { minutes, seconds } =
-                    fromSecondsToMinutesSeconds span
-            in
-            { minutes = String.fromInt minutes, seconds = String.fromInt seconds }
-    in
-    { soak = conv spans.soak, dev = conv spans.dev, stop = conv spans.stop, fix = conv spans.fix, rinse = conv spans.rinse, wet = conv spans.wet }
 
 
 fromTimeInputsToTimeSpans : TimeInputs -> Result (List TimeSpanDecodeError) TimeSpans
