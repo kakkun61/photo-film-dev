@@ -200,6 +200,271 @@ function A9(fun, a, b, c, d, e, f, g, h, i) {
 console.warn('Compiled in DEBUG mode. Follow the advice at https://elm-lang.org/0.19.1/optimize for better performance and smaller assets.');
 
 
+// EQUALITY
+
+function _Utils_eq(x, y)
+{
+	for (
+		var pair, stack = [], isEqual = _Utils_eqHelp(x, y, 0, stack);
+		isEqual && (pair = stack.pop());
+		isEqual = _Utils_eqHelp(pair.a, pair.b, 0, stack)
+		)
+	{}
+
+	return isEqual;
+}
+
+function _Utils_eqHelp(x, y, depth, stack)
+{
+	if (x === y)
+	{
+		return true;
+	}
+
+	if (typeof x !== 'object' || x === null || y === null)
+	{
+		typeof x === 'function' && _Debug_crash(5);
+		return false;
+	}
+
+	if (depth > 100)
+	{
+		stack.push(_Utils_Tuple2(x,y));
+		return true;
+	}
+
+	/**/
+	if (x.$ === 'Set_elm_builtin')
+	{
+		x = $elm$core$Set$toList(x);
+		y = $elm$core$Set$toList(y);
+	}
+	if (x.$ === 'RBNode_elm_builtin' || x.$ === 'RBEmpty_elm_builtin')
+	{
+		x = $elm$core$Dict$toList(x);
+		y = $elm$core$Dict$toList(y);
+	}
+	//*/
+
+	/**_UNUSED/
+	if (x.$ < 0)
+	{
+		x = $elm$core$Dict$toList(x);
+		y = $elm$core$Dict$toList(y);
+	}
+	//*/
+
+	for (var key in x)
+	{
+		if (!_Utils_eqHelp(x[key], y[key], depth + 1, stack))
+		{
+			return false;
+		}
+	}
+	return true;
+}
+
+var _Utils_equal = F2(_Utils_eq);
+var _Utils_notEqual = F2(function(a, b) { return !_Utils_eq(a,b); });
+
+
+
+// COMPARISONS
+
+// Code in Generate/JavaScript.hs, Basics.js, and List.js depends on
+// the particular integer values assigned to LT, EQ, and GT.
+
+function _Utils_cmp(x, y, ord)
+{
+	if (typeof x !== 'object')
+	{
+		return x === y ? /*EQ*/ 0 : x < y ? /*LT*/ -1 : /*GT*/ 1;
+	}
+
+	/**/
+	if (x instanceof String)
+	{
+		var a = x.valueOf();
+		var b = y.valueOf();
+		return a === b ? 0 : a < b ? -1 : 1;
+	}
+	//*/
+
+	/**_UNUSED/
+	if (typeof x.$ === 'undefined')
+	//*/
+	/**/
+	if (x.$[0] === '#')
+	//*/
+	{
+		return (ord = _Utils_cmp(x.a, y.a))
+			? ord
+			: (ord = _Utils_cmp(x.b, y.b))
+				? ord
+				: _Utils_cmp(x.c, y.c);
+	}
+
+	// traverse conses until end of a list or a mismatch
+	for (; x.b && y.b && !(ord = _Utils_cmp(x.a, y.a)); x = x.b, y = y.b) {} // WHILE_CONSES
+	return ord || (x.b ? /*GT*/ 1 : y.b ? /*LT*/ -1 : /*EQ*/ 0);
+}
+
+var _Utils_lt = F2(function(a, b) { return _Utils_cmp(a, b) < 0; });
+var _Utils_le = F2(function(a, b) { return _Utils_cmp(a, b) < 1; });
+var _Utils_gt = F2(function(a, b) { return _Utils_cmp(a, b) > 0; });
+var _Utils_ge = F2(function(a, b) { return _Utils_cmp(a, b) >= 0; });
+
+var _Utils_compare = F2(function(x, y)
+{
+	var n = _Utils_cmp(x, y);
+	return n < 0 ? $elm$core$Basics$LT : n ? $elm$core$Basics$GT : $elm$core$Basics$EQ;
+});
+
+
+// COMMON VALUES
+
+var _Utils_Tuple0_UNUSED = 0;
+var _Utils_Tuple0 = { $: '#0' };
+
+function _Utils_Tuple2_UNUSED(a, b) { return { a: a, b: b }; }
+function _Utils_Tuple2(a, b) { return { $: '#2', a: a, b: b }; }
+
+function _Utils_Tuple3_UNUSED(a, b, c) { return { a: a, b: b, c: c }; }
+function _Utils_Tuple3(a, b, c) { return { $: '#3', a: a, b: b, c: c }; }
+
+function _Utils_chr_UNUSED(c) { return c; }
+function _Utils_chr(c) { return new String(c); }
+
+
+// RECORDS
+
+function _Utils_update(oldRecord, updatedFields)
+{
+	var newRecord = {};
+
+	for (var key in oldRecord)
+	{
+		newRecord[key] = oldRecord[key];
+	}
+
+	for (var key in updatedFields)
+	{
+		newRecord[key] = updatedFields[key];
+	}
+
+	return newRecord;
+}
+
+
+// APPEND
+
+var _Utils_append = F2(_Utils_ap);
+
+function _Utils_ap(xs, ys)
+{
+	// append Strings
+	if (typeof xs === 'string')
+	{
+		return xs + ys;
+	}
+
+	// append Lists
+	if (!xs.b)
+	{
+		return ys;
+	}
+	var root = _List_Cons(xs.a, ys);
+	xs = xs.b
+	for (var curr = root; xs.b; xs = xs.b) // WHILE_CONS
+	{
+		curr = curr.b = _List_Cons(xs.a, ys);
+	}
+	return root;
+}
+
+
+
+var _List_Nil_UNUSED = { $: 0 };
+var _List_Nil = { $: '[]' };
+
+function _List_Cons_UNUSED(hd, tl) { return { $: 1, a: hd, b: tl }; }
+function _List_Cons(hd, tl) { return { $: '::', a: hd, b: tl }; }
+
+
+var _List_cons = F2(_List_Cons);
+
+function _List_fromArray(arr)
+{
+	var out = _List_Nil;
+	for (var i = arr.length; i--; )
+	{
+		out = _List_Cons(arr[i], out);
+	}
+	return out;
+}
+
+function _List_toArray(xs)
+{
+	for (var out = []; xs.b; xs = xs.b) // WHILE_CONS
+	{
+		out.push(xs.a);
+	}
+	return out;
+}
+
+var _List_map2 = F3(function(f, xs, ys)
+{
+	for (var arr = []; xs.b && ys.b; xs = xs.b, ys = ys.b) // WHILE_CONSES
+	{
+		arr.push(A2(f, xs.a, ys.a));
+	}
+	return _List_fromArray(arr);
+});
+
+var _List_map3 = F4(function(f, xs, ys, zs)
+{
+	for (var arr = []; xs.b && ys.b && zs.b; xs = xs.b, ys = ys.b, zs = zs.b) // WHILE_CONSES
+	{
+		arr.push(A3(f, xs.a, ys.a, zs.a));
+	}
+	return _List_fromArray(arr);
+});
+
+var _List_map4 = F5(function(f, ws, xs, ys, zs)
+{
+	for (var arr = []; ws.b && xs.b && ys.b && zs.b; ws = ws.b, xs = xs.b, ys = ys.b, zs = zs.b) // WHILE_CONSES
+	{
+		arr.push(A4(f, ws.a, xs.a, ys.a, zs.a));
+	}
+	return _List_fromArray(arr);
+});
+
+var _List_map5 = F6(function(f, vs, ws, xs, ys, zs)
+{
+	for (var arr = []; vs.b && ws.b && xs.b && ys.b && zs.b; vs = vs.b, ws = ws.b, xs = xs.b, ys = ys.b, zs = zs.b) // WHILE_CONSES
+	{
+		arr.push(A5(f, vs.a, ws.a, xs.a, ys.a, zs.a));
+	}
+	return _List_fromArray(arr);
+});
+
+var _List_sortBy = F2(function(f, xs)
+{
+	return _List_fromArray(_List_toArray(xs).sort(function(a, b) {
+		return _Utils_cmp(f(a), f(b));
+	}));
+});
+
+var _List_sortWith = F2(function(f, xs)
+{
+	return _List_fromArray(_List_toArray(xs).sort(function(a, b) {
+		var ord = A2(f, a, b);
+		return ord === $elm$core$Basics$EQ ? 0 : ord === $elm$core$Basics$LT ? -1 : 1;
+	}));
+});
+
+
+
 var _JsArray_empty = [];
 
 function _JsArray_singleton(value)
@@ -645,271 +910,6 @@ function _Debug_regionToString(region)
 	}
 	return 'on lines ' + region.start.line + ' through ' + region.end.line;
 }
-
-
-
-// EQUALITY
-
-function _Utils_eq(x, y)
-{
-	for (
-		var pair, stack = [], isEqual = _Utils_eqHelp(x, y, 0, stack);
-		isEqual && (pair = stack.pop());
-		isEqual = _Utils_eqHelp(pair.a, pair.b, 0, stack)
-		)
-	{}
-
-	return isEqual;
-}
-
-function _Utils_eqHelp(x, y, depth, stack)
-{
-	if (x === y)
-	{
-		return true;
-	}
-
-	if (typeof x !== 'object' || x === null || y === null)
-	{
-		typeof x === 'function' && _Debug_crash(5);
-		return false;
-	}
-
-	if (depth > 100)
-	{
-		stack.push(_Utils_Tuple2(x,y));
-		return true;
-	}
-
-	/**/
-	if (x.$ === 'Set_elm_builtin')
-	{
-		x = $elm$core$Set$toList(x);
-		y = $elm$core$Set$toList(y);
-	}
-	if (x.$ === 'RBNode_elm_builtin' || x.$ === 'RBEmpty_elm_builtin')
-	{
-		x = $elm$core$Dict$toList(x);
-		y = $elm$core$Dict$toList(y);
-	}
-	//*/
-
-	/**_UNUSED/
-	if (x.$ < 0)
-	{
-		x = $elm$core$Dict$toList(x);
-		y = $elm$core$Dict$toList(y);
-	}
-	//*/
-
-	for (var key in x)
-	{
-		if (!_Utils_eqHelp(x[key], y[key], depth + 1, stack))
-		{
-			return false;
-		}
-	}
-	return true;
-}
-
-var _Utils_equal = F2(_Utils_eq);
-var _Utils_notEqual = F2(function(a, b) { return !_Utils_eq(a,b); });
-
-
-
-// COMPARISONS
-
-// Code in Generate/JavaScript.hs, Basics.js, and List.js depends on
-// the particular integer values assigned to LT, EQ, and GT.
-
-function _Utils_cmp(x, y, ord)
-{
-	if (typeof x !== 'object')
-	{
-		return x === y ? /*EQ*/ 0 : x < y ? /*LT*/ -1 : /*GT*/ 1;
-	}
-
-	/**/
-	if (x instanceof String)
-	{
-		var a = x.valueOf();
-		var b = y.valueOf();
-		return a === b ? 0 : a < b ? -1 : 1;
-	}
-	//*/
-
-	/**_UNUSED/
-	if (typeof x.$ === 'undefined')
-	//*/
-	/**/
-	if (x.$[0] === '#')
-	//*/
-	{
-		return (ord = _Utils_cmp(x.a, y.a))
-			? ord
-			: (ord = _Utils_cmp(x.b, y.b))
-				? ord
-				: _Utils_cmp(x.c, y.c);
-	}
-
-	// traverse conses until end of a list or a mismatch
-	for (; x.b && y.b && !(ord = _Utils_cmp(x.a, y.a)); x = x.b, y = y.b) {} // WHILE_CONSES
-	return ord || (x.b ? /*GT*/ 1 : y.b ? /*LT*/ -1 : /*EQ*/ 0);
-}
-
-var _Utils_lt = F2(function(a, b) { return _Utils_cmp(a, b) < 0; });
-var _Utils_le = F2(function(a, b) { return _Utils_cmp(a, b) < 1; });
-var _Utils_gt = F2(function(a, b) { return _Utils_cmp(a, b) > 0; });
-var _Utils_ge = F2(function(a, b) { return _Utils_cmp(a, b) >= 0; });
-
-var _Utils_compare = F2(function(x, y)
-{
-	var n = _Utils_cmp(x, y);
-	return n < 0 ? $elm$core$Basics$LT : n ? $elm$core$Basics$GT : $elm$core$Basics$EQ;
-});
-
-
-// COMMON VALUES
-
-var _Utils_Tuple0_UNUSED = 0;
-var _Utils_Tuple0 = { $: '#0' };
-
-function _Utils_Tuple2_UNUSED(a, b) { return { a: a, b: b }; }
-function _Utils_Tuple2(a, b) { return { $: '#2', a: a, b: b }; }
-
-function _Utils_Tuple3_UNUSED(a, b, c) { return { a: a, b: b, c: c }; }
-function _Utils_Tuple3(a, b, c) { return { $: '#3', a: a, b: b, c: c }; }
-
-function _Utils_chr_UNUSED(c) { return c; }
-function _Utils_chr(c) { return new String(c); }
-
-
-// RECORDS
-
-function _Utils_update(oldRecord, updatedFields)
-{
-	var newRecord = {};
-
-	for (var key in oldRecord)
-	{
-		newRecord[key] = oldRecord[key];
-	}
-
-	for (var key in updatedFields)
-	{
-		newRecord[key] = updatedFields[key];
-	}
-
-	return newRecord;
-}
-
-
-// APPEND
-
-var _Utils_append = F2(_Utils_ap);
-
-function _Utils_ap(xs, ys)
-{
-	// append Strings
-	if (typeof xs === 'string')
-	{
-		return xs + ys;
-	}
-
-	// append Lists
-	if (!xs.b)
-	{
-		return ys;
-	}
-	var root = _List_Cons(xs.a, ys);
-	xs = xs.b
-	for (var curr = root; xs.b; xs = xs.b) // WHILE_CONS
-	{
-		curr = curr.b = _List_Cons(xs.a, ys);
-	}
-	return root;
-}
-
-
-
-var _List_Nil_UNUSED = { $: 0 };
-var _List_Nil = { $: '[]' };
-
-function _List_Cons_UNUSED(hd, tl) { return { $: 1, a: hd, b: tl }; }
-function _List_Cons(hd, tl) { return { $: '::', a: hd, b: tl }; }
-
-
-var _List_cons = F2(_List_Cons);
-
-function _List_fromArray(arr)
-{
-	var out = _List_Nil;
-	for (var i = arr.length; i--; )
-	{
-		out = _List_Cons(arr[i], out);
-	}
-	return out;
-}
-
-function _List_toArray(xs)
-{
-	for (var out = []; xs.b; xs = xs.b) // WHILE_CONS
-	{
-		out.push(xs.a);
-	}
-	return out;
-}
-
-var _List_map2 = F3(function(f, xs, ys)
-{
-	for (var arr = []; xs.b && ys.b; xs = xs.b, ys = ys.b) // WHILE_CONSES
-	{
-		arr.push(A2(f, xs.a, ys.a));
-	}
-	return _List_fromArray(arr);
-});
-
-var _List_map3 = F4(function(f, xs, ys, zs)
-{
-	for (var arr = []; xs.b && ys.b && zs.b; xs = xs.b, ys = ys.b, zs = zs.b) // WHILE_CONSES
-	{
-		arr.push(A3(f, xs.a, ys.a, zs.a));
-	}
-	return _List_fromArray(arr);
-});
-
-var _List_map4 = F5(function(f, ws, xs, ys, zs)
-{
-	for (var arr = []; ws.b && xs.b && ys.b && zs.b; ws = ws.b, xs = xs.b, ys = ys.b, zs = zs.b) // WHILE_CONSES
-	{
-		arr.push(A4(f, ws.a, xs.a, ys.a, zs.a));
-	}
-	return _List_fromArray(arr);
-});
-
-var _List_map5 = F6(function(f, vs, ws, xs, ys, zs)
-{
-	for (var arr = []; vs.b && ws.b && xs.b && ys.b && zs.b; vs = vs.b, ws = ws.b, xs = xs.b, ys = ys.b, zs = zs.b) // WHILE_CONSES
-	{
-		arr.push(A5(f, vs.a, ws.a, xs.a, ys.a, zs.a));
-	}
-	return _List_fromArray(arr);
-});
-
-var _List_sortBy = F2(function(f, xs)
-{
-	return _List_fromArray(_List_toArray(xs).sort(function(a, b) {
-		return _Utils_cmp(f(a), f(b));
-	}));
-});
-
-var _List_sortWith = F2(function(f, xs)
-{
-	return _List_fromArray(_List_toArray(xs).sort(function(a, b) {
-		var ord = A2(f, a, b);
-		return ord === $elm$core$Basics$EQ ? 0 : ord === $elm$core$Basics$LT ? -1 : 1;
-	}));
-});
 
 
 
@@ -5205,31 +5205,10 @@ var _Regex_splitAtMost = F3(function(n, re, str)
 });
 
 var _Regex_infinity = Infinity;
+var $elm$core$Basics$EQ = {$: 'EQ'};
+var $elm$core$Basics$GT = {$: 'GT'};
+var $elm$core$Basics$LT = {$: 'LT'};
 var $elm$core$List$cons = _List_cons;
-var $elm$core$Elm$JsArray$foldr = _JsArray_foldr;
-var $elm$core$Array$foldr = F3(
-	function (func, baseCase, _v0) {
-		var tree = _v0.c;
-		var tail = _v0.d;
-		var helper = F2(
-			function (node, acc) {
-				if (node.$ === 'SubTree') {
-					var subTree = node.a;
-					return A3($elm$core$Elm$JsArray$foldr, helper, acc, subTree);
-				} else {
-					var values = node.a;
-					return A3($elm$core$Elm$JsArray$foldr, func, acc, values);
-				}
-			});
-		return A3(
-			$elm$core$Elm$JsArray$foldr,
-			helper,
-			A3($elm$core$Elm$JsArray$foldr, func, baseCase, tail),
-			tree);
-	});
-var $elm$core$Array$toList = function (array) {
-	return A3($elm$core$Array$foldr, $elm$core$List$cons, _List_Nil, array);
-};
 var $elm$core$Dict$foldr = F3(
 	function (func, acc, t) {
 		foldr:
@@ -5282,9 +5261,30 @@ var $elm$core$Set$toList = function (_v0) {
 	var dict = _v0.a;
 	return $elm$core$Dict$keys(dict);
 };
-var $elm$core$Basics$EQ = {$: 'EQ'};
-var $elm$core$Basics$GT = {$: 'GT'};
-var $elm$core$Basics$LT = {$: 'LT'};
+var $elm$core$Elm$JsArray$foldr = _JsArray_foldr;
+var $elm$core$Array$foldr = F3(
+	function (func, baseCase, _v0) {
+		var tree = _v0.c;
+		var tail = _v0.d;
+		var helper = F2(
+			function (node, acc) {
+				if (node.$ === 'SubTree') {
+					var subTree = node.a;
+					return A3($elm$core$Elm$JsArray$foldr, helper, acc, subTree);
+				} else {
+					var values = node.a;
+					return A3($elm$core$Elm$JsArray$foldr, func, acc, values);
+				}
+			});
+		return A3(
+			$elm$core$Elm$JsArray$foldr,
+			helper,
+			A3($elm$core$Elm$JsArray$foldr, func, baseCase, tail),
+			tree);
+	});
+var $elm$core$Array$toList = function (array) {
+	return A3($elm$core$Array$foldr, $elm$core$List$cons, _List_Nil, array);
+};
 var $elm$core$Result$Err = function (a) {
 	return {$: 'Err', a: a};
 };
@@ -5680,7 +5680,6 @@ var $elm$core$Result$isOk = function (result) {
 		return false;
 	}
 };
-var $elm$json$Json$Decode$andThen = _Json_andThen;
 var $elm$json$Json$Decode$map = _Json_map1;
 var $elm$json$Json$Decode$map2 = _Json_map2;
 var $elm$json$Json$Decode$succeed = _Json_succeed;
@@ -10846,8 +10845,7 @@ var $author$project$Model$initialTimeInputs = {
 	stop: A2($author$project$Model$TimeInput, '2', '0'),
 	wet: A2($author$project$Model$TimeInput, '0', '30')
 };
-var $author$project$Main$init = function (_v0) {
-	var seed = _v0.seed;
+var $author$project$Main$init = function (seed) {
 	return _Utils_Tuple2(
 		{
 			appModel: $author$project$Model$EditModel(
@@ -10880,6 +10878,7 @@ var $author$project$Msg$UserChanged = function (a) {
 	return {$: 'UserChanged', a: a};
 };
 var $elm$core$Platform$Sub$batch = _Platform_batch;
+var $elm$json$Json$Decode$andThen = _Json_andThen;
 var $elm$json$Json$Decode$array = _Json_decodeArray;
 var $author$project$Port$changeRecipesSub = _Platform_incomingPort(
 	'changeRecipesSub',
@@ -16583,7 +16582,7 @@ var $author$project$View$editContentRow = F4(
 	});
 var $author$project$Internal$TopAppBar$Implementation$fixedAdjust = $author$project$Internal$Options$cs('mdc-top-app-bar--fixed-adjust');
 var $author$project$Material$TopAppBar$fixedAdjust = $author$project$Internal$TopAppBar$Implementation$fixedAdjust;
-var $author$project$Text$noRecipe = function (lang) {
+var $author$project$Text$noRecipes = function (lang) {
 	return 'レシピを選択してください';
 };
 var $author$project$Model$Step$fromInt = function (value) {
@@ -16697,7 +16696,6 @@ var $author$project$View$runContentRow = F3(
 		var timeSpans = _v0.timeSpans;
 		var step = _v0.step;
 		var rest = _v0.rest;
-		var state = _v0.state;
 		var timeSpan = A2($author$project$Model$Step$get, rowStep, timeSpans);
 		var rest1 = A2($author$project$Model$Step$get, rowStep, rest);
 		var order = A2(
@@ -16785,7 +16783,6 @@ var $elm$html$Html$tbody = _VirtualDom_node('tbody');
 var $author$project$View$content = function (model) {
 	var _v0 = model.appModel;
 	if (_v0.$ === 'EditModel') {
-		var editModel = _v0.a;
 		return _List_fromArray(
 			[
 				A3(
@@ -16851,7 +16848,7 @@ var $author$project$View$content = function (model) {
 										_List_fromArray(
 											[
 												$elm$html$Html$text(
-												$author$project$Text$noRecipe(model.lang))
+												$author$project$Text$noRecipes(model.lang))
 											]))
 									]));
 						}
@@ -18322,12 +18319,10 @@ var $author$project$View$drawer = function (model) {
 														var recipe = _v4.b;
 														return A2(
 															$author$project$Material$List$li,
-															_Utils_ap(
-																_List_fromArray(
-																	[
-																		$author$project$Material$Options$onClick(
-																		$author$project$Msg$SelectRecipe(recipe))
-																	]),
+															A2(
+																$elm$core$List$cons,
+																$author$project$Material$Options$onClick(
+																	$author$project$Msg$SelectRecipe(recipe)),
 																_Utils_eq(
 																	$elm$core$Maybe$Just(id),
 																	A2($elm$core$Maybe$map, $TSFoster$elm_uuid$UUID$toString, loggedIn.recipeId)) ? _List_fromArray(
@@ -22156,7 +22151,7 @@ var $author$project$Internal$Dialog$Implementation$content = function (options) 
 			options));
 };
 var $author$project$Material$Dialog$content = $author$project$Internal$Dialog$Implementation$content;
-var $author$project$Text$google = function (lang) {
+var $author$project$Text$google = function (_v0) {
 	return 'Google';
 };
 var $elm$html$Html$h2 = _VirtualDom_node('h2');
@@ -22204,7 +22199,7 @@ var $author$project$Material$List$selectedIndex = $author$project$Internal$List$
 var $author$project$Material$Options$tabindex = $author$project$Internal$Options$tabindex;
 var $author$project$Internal$Dialog$Implementation$title = $author$project$Internal$Options$cs('mdc-dialog__title');
 var $author$project$Material$Dialog$title = $author$project$Internal$Dialog$Implementation$title;
-var $author$project$Text$twitter = function (lang) {
+var $author$project$Text$twitter = function (_v0) {
 	return 'Twitter';
 };
 var $author$project$Material$List$ul = $author$project$Internal$List$Implementation$view;
@@ -22877,9 +22872,6 @@ var $author$project$View$topAppBar = function (model) {
 					]))
 			]);
 	} else {
-		var timeSpans = _v0.a.timeSpans;
-		var step = _v0.a.step;
-		var rest = _v0.a.rest;
 		var state = _v0.a.state;
 		return _List_fromArray(
 			[
@@ -22980,14 +22972,7 @@ var $author$project$Main$view = function (model) {
 };
 var $author$project$Main$main = $elm$browser$Browser$element(
 	{init: $author$project$Main$init, subscriptions: $author$project$Main$subscriptions, update: $author$project$Main$update, view: $author$project$Main$view});
-_Platform_export({'Main':{'init':$author$project$Main$main(
-	A2(
-		$elm$json$Json$Decode$andThen,
-		function (seed) {
-			return $elm$json$Json$Decode$succeed(
-				{seed: seed});
-		},
-		A2($elm$json$Json$Decode$field, 'seed', $elm$json$Json$Decode$int)))({"versions":{"elm":"0.19.1"},"types":{"message":"Msg.Msg","aliases":{"Msg.Component":{"args":[],"type":"Msg.Component.Component"},"Msg.Error":{"args":[],"type":"Msg.Error.Error"},"Msg.LogInProvider":{"args":[],"type":"Msg.LogIn.Provider.Provider"},"Material.Msg":{"args":["m"],"type":"Internal.Msg.Msg m"},"Model.Recipe":{"args":[],"type":"{ id : UUID.UUID, name : String.String, timeInputs : Model.TimeInputs }"},"Model.TimeInput":{"args":[],"type":"{ minutes : String.String, seconds : String.String }"},"Model.TimeInputs":{"args":[],"type":"{ soak : Model.TimeInput, dev : Model.TimeInput, stop : Model.TimeInput, fix : Model.TimeInput, rinse : Model.TimeInput, wet : Model.TimeInput }"},"Model.User":{"args":[],"type":"{ uid : String.String, displayName : String.String }"},"Internal.Index.Index":{"args":[],"type":"String.String"},"Model.Step":{"args":[],"type":"Model.Step.Step"},"Internal.Ripple.Model.ActivateData":{"args":[],"type":"{ event : Internal.Ripple.Model.Event, isSurfaceDisabled : Basics.Bool, wasElementMadeActive : Basics.Bool, isUnbounded : Basics.Bool }"},"Internal.Ripple.Model.ClientRect":{"args":[],"type":"{ top : Basics.Float, left : Basics.Float, width : Basics.Float, height : Basics.Float }"},"Browser.Dom.Element":{"args":[],"type":"{ scene : { width : Basics.Float, height : Basics.Float }, viewport : { x : Basics.Float, y : Basics.Float, width : Basics.Float, height : Basics.Float }, element : { x : Basics.Float, y : Basics.Float, width : Basics.Float, height : Basics.Float } }"},"Internal.Ripple.Model.Event":{"args":[],"type":"{ eventType : String.String, pagePoint : { pageX : Basics.Float, pageY : Basics.Float } }"},"Internal.Menu.Model.Geometry":{"args":[],"type":"{ viewport : Internal.Menu.Model.Viewport, viewportDistance : Internal.Menu.Model.ViewportDistance, anchor : { width : Basics.Float, height : Basics.Float }, menu : { width : Basics.Float, height : Basics.Float } }"},"Internal.Slider.Model.Geometry":{"args":[],"type":"{ rect : Internal.Slider.Model.Rect, discrete : Basics.Bool, step : Maybe.Maybe Basics.Float, min : Basics.Float, max : Basics.Float }"},"Internal.TabBar.Model.Geometry":{"args":[],"type":"{ tabs : List.List Internal.TabBar.Model.Tab, scrollArea : { offsetWidth : Basics.Float }, tabBar : { offsetWidth : Basics.Float } }"},"Internal.TextField.Model.Geometry":{"args":[],"type":"{ width : Basics.Float, height : Basics.Float, labelWidth : Basics.Float }"},"Internal.Keyboard.Key":{"args":[],"type":"String.String"},"Internal.Keyboard.KeyCode":{"args":[],"type":"Basics.Int"},"Internal.Keyboard.Meta":{"args":[],"type":"{ altKey : Basics.Bool, ctrlKey : Basics.Bool, metaKey : Basics.Bool, shiftKey : Basics.Bool }"},"Internal.Slider.Model.Rect":{"args":[],"type":"{ left : Basics.Float, width : Basics.Float }"},"Internal.TabBar.Model.Tab":{"args":[],"type":"{ offsetLeft : Basics.Float, offsetWidth : Basics.Float, contentLeft : Basics.Float, contentRight : Basics.Float }"},"Internal.Menu.Model.Viewport":{"args":[],"type":"{ width : Basics.Float, height : Basics.Float }"},"Internal.Menu.Model.ViewportDistance":{"args":[],"type":"{ top : Basics.Float, right : Basics.Float, left : Basics.Float, bottom : Basics.Float }"}},"unions":{"Msg.Msg":{"args":[],"tags":{"Mdc":["Material.Msg Msg.Msg"],"GoRun":[],"GoEdit":[],"Input":["Msg.Component","String.String"],"Change":["Msg.Component","String.String"],"Tick":["Time.Posix"],"Next":[],"Restart":[],"Pause":[],"Init":[],"Drawer":["Msg.Visible"],"NewRecipe":[],"SelectRecipe":["Model.Recipe"],"RecipesChanged":["Dict.Dict String.String Model.Recipe"],"NameTextField":["Msg.Visible"],"LogInDialog":["Msg.Visible"],"SelectLogInDialogListItem":["Basics.Int"],"LogIn":["Msg.LogInProvider"],"LogOut":[],"UserChanged":["Maybe.Maybe Model.User"],"Error":["Msg.Error"]}},"Msg.Component.Component":{"args":[],"tags":{"Name":[],"Time":["Model.Step","Model.TimeHand.TimeHand"]}},"Dict.Dict":{"args":["k","v"],"tags":{"RBNode_elm_builtin":["Dict.NColor","k","v","Dict.Dict k v","Dict.Dict k v"],"RBEmpty_elm_builtin":[]}},"Msg.Error.Error":{"args":[],"tags":{"RecipeDecoder":["List.List Model.RecipeDecoderError"],"Foreign":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"Maybe.Maybe":{"args":["a"],"tags":{"Just":["a"],"Nothing":[]}},"Internal.Msg.Msg":{"args":["m"],"tags":{"Dispatch":["List.List m"],"ButtonMsg":["Internal.Index.Index","Internal.Button.Model.Msg m"],"CheckboxMsg":["Internal.Index.Index","Internal.Checkbox.Model.Msg"],"ChipMsg":["Internal.Index.Index","Internal.Chip.Model.Msg m"],"DialogMsg":["Internal.Index.Index","Internal.Dialog.Model.Msg"],"DrawerMsg":["Internal.Index.Index","Internal.Drawer.Model.Msg"],"FabMsg":["Internal.Index.Index","Internal.Fab.Model.Msg"],"IconButtonMsg":["Internal.Index.Index","Internal.IconButton.Model.Msg"],"ListMsg":["Internal.Index.Index","Internal.List.Model.Msg m"],"MenuMsg":["Internal.Index.Index","Internal.Menu.Model.Msg m"],"RadioButtonMsg":["Internal.Index.Index","Internal.RadioButton.Model.Msg"],"RippleMsg":["Internal.Index.Index","Internal.Ripple.Model.Msg"],"SelectMsg":["Internal.Index.Index","Internal.Select.Model.Msg m"],"SliderMsg":["Internal.Index.Index","Internal.Slider.Model.Msg m"],"SnackbarMsg":["Internal.Index.Index","Internal.Snackbar.Model.Msg m"],"SwitchMsg":["Internal.Index.Index","Internal.Switch.Model.Msg"],"TabBarMsg":["Internal.Index.Index","Internal.TabBar.Model.Msg m"],"TextFieldMsg":["Internal.Index.Index","Internal.TextField.Model.Msg"],"TopAppBarMsg":["Internal.Index.Index","Internal.TopAppBar.Model.Msg"]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Msg.LogIn.Provider.Provider":{"args":[],"tags":{"Google":[],"Twitter":[]}},"String.String":{"args":[],"tags":{"String":[]}},"UUID.UUID":{"args":[],"tags":{"UUID":["Basics.Int","Basics.Int","Basics.Int","Basics.Int"]}},"Msg.Visible":{"args":[],"tags":{"Show":[],"Hide":[]}},"List.List":{"args":["a"],"tags":{}},"Internal.Button.Model.Msg":{"args":["m"],"tags":{"RippleMsg":["Internal.Ripple.Model.Msg"],"Click":["Basics.Bool","m"]}},"Internal.Checkbox.Model.Msg":{"args":[],"tags":{"NoOp":[],"Init":["Maybe.Maybe (Maybe.Maybe Internal.Checkbox.Model.State)","Maybe.Maybe Internal.Checkbox.Model.State"],"SetFocus":["Basics.Bool"],"AnimationEnd":[]}},"Internal.Chip.Model.Msg":{"args":["m"],"tags":{"RippleMsg":["Internal.Ripple.Model.Msg"],"Click":["m"]}},"Internal.Dialog.Model.Msg":{"args":[],"tags":{"NoOp":[],"StartAnimation":["Basics.Bool"],"EndAnimation":[]}},"Internal.Drawer.Model.Msg":{"args":[],"tags":{"NoOp":[],"StartAnimation":["Basics.Bool"],"EndAnimation":[]}},"Internal.Fab.Model.Msg":{"args":[],"tags":{"RippleMsg":["Internal.Ripple.Model.Msg"],"NoOp":[]}},"Internal.IconButton.Model.Msg":{"args":[],"tags":{"RippleMsg":["Internal.Ripple.Model.Msg"]}},"Internal.List.Model.Msg":{"args":["m"],"tags":{"NoOp":[],"RippleMsg":["String.String","Internal.Ripple.Model.Msg"],"FocusItem":["Basics.Int","String.String"],"ResetFocusedItem":[],"SelectItem":["Basics.Int","Basics.Int -> m"]}},"Internal.Menu.Model.Msg":{"args":["m"],"tags":{"NoOp":[],"Init":["{ quickOpen : Basics.Bool, index : Maybe.Maybe Basics.Int, focusedItemId : String.String }","Internal.Menu.Model.Geometry"],"AnimationEnd":[],"Open":[],"Close":[],"Toggle":[],"CloseDelayed":[],"DocumentClick":[],"KeyDown":["Internal.Keyboard.Meta","Internal.Keyboard.Key","Internal.Keyboard.KeyCode"],"KeyUp":["Internal.Keyboard.Meta","Internal.Keyboard.Key","Internal.Keyboard.KeyCode"],"ListMsg":["Internal.List.Model.Msg m"]}},"Internal.RadioButton.Model.Msg":{"args":[],"tags":{"RippleMsg":["Internal.Ripple.Model.Msg"],"NoOp":[],"SetFocus":["Basics.Bool"]}},"Internal.Ripple.Model.Msg":{"args":[],"tags":{"Focus":[],"Blur":[],"Activate0":["String.String","Internal.Ripple.Model.ActivateData"],"Activate":["Internal.Ripple.Model.ActivateData","Result.Result Browser.Dom.Error Browser.Dom.Element"],"Reactivate":["Internal.Ripple.Model.ActivateData","Result.Result Browser.Dom.Error Browser.Dom.Element"],"ActivationEnded":["Basics.Int"],"Deactivate":[],"DeactivationEnded":["Basics.Int"],"SetCssVariables":["Basics.Bool","Internal.Ripple.Model.ClientRect"]}},"Internal.Select.Model.Msg":{"args":["m"],"tags":{"NoOp":[],"Blur":[],"Focus":[],"Change":["String.String"],"RippleMsg":["Internal.Ripple.Model.Msg"],"KeyDown":["String.String","Internal.Keyboard.Key","Internal.Keyboard.KeyCode"],"OpenMenu":["String.String"],"ToggleMenu":[],"MenuSelection":["String.String","String.String -> m","String.String"],"MenuMsg":["Internal.Menu.Model.Msg m"]}},"Internal.Slider.Model.Msg":{"args":["m"],"tags":{"NoOp":[],"Init":["Internal.Slider.Model.Geometry"],"Resize":["Internal.Slider.Model.Geometry"],"InteractionStart":["String.String","{ pageX : Basics.Float }"],"KeyDown":[],"Focus":[],"Blur":[],"ThumbContainerPointer":["String.String","{ pageX : Basics.Float }"],"TransitionEnd":[],"Drag":["{ pageX : Basics.Float }"],"Up":[],"ActualUp":[]}},"Internal.Snackbar.Model.Msg":{"args":["m"],"tags":{"Move":["Basics.Int","Internal.Snackbar.Model.Transition"],"Dismiss":["Basics.Bool","Maybe.Maybe m"],"SetOpen":[]}},"Internal.Switch.Model.Msg":{"args":[],"tags":{"RippleMsg":["Internal.Ripple.Model.Msg"],"SetFocus":["Basics.Bool"],"NoOp":[]}},"Internal.TabBar.Model.Msg":{"args":["m"],"tags":{"NoOp":[],"Dispatch":["List.List m"],"RippleMsg":["Basics.Int","Internal.Ripple.Model.Msg"],"Init":["Internal.TabBar.Model.Geometry"],"SetActiveTab":["String.String","Basics.Int","Basics.Float"]}},"Internal.TextField.Model.Msg":{"args":[],"tags":{"Blur":[],"Focus":["Internal.TextField.Model.Geometry"],"Input":["String.String"],"NoOp":[]}},"Internal.TopAppBar.Model.Msg":{"args":[],"tags":{"RippleMsg":["String.String","Internal.Ripple.Model.Msg"],"Init":["{ scrollPosition : Basics.Float, topAppBarHeight : Basics.Float }"],"Resize":["{ scrollPosition : Basics.Float, topAppBarHeight : Basics.Float }"],"Scroll":["{ scrollPosition : Basics.Float }"]}},"Dict.NColor":{"args":[],"tags":{"Red":[],"Black":[]}},"Model.RecipeDecoderError":{"args":[],"tags":{"UuidError":["UUID.Error"]}},"Model.Step.Step":{"args":[],"tags":{"Soak":[],"Dev":[],"Stop":[],"Fix":[],"Rinse":[],"Wet":[]}},"Model.TimeHand.TimeHand":{"args":[],"tags":{"Minutes":[],"Seconds":[]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"Browser.Dom.Error":{"args":[],"tags":{"NotFound":["String.String"]}},"UUID.Error":{"args":[],"tags":{"WrongFormat":[],"WrongLength":[],"UnsupportedVariant":[],"IsNil":[],"NoVersion":[]}},"Basics.Float":{"args":[],"tags":{"Float":[]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"Internal.Checkbox.Model.State":{"args":[],"tags":{"Checked":[],"Unchecked":[]}},"Internal.Snackbar.Model.Transition":{"args":[],"tags":{"Timeout":[],"Clicked":[]}}}}})}});
+_Platform_export({'Main':{'init':$author$project$Main$main($elm$json$Json$Decode$int)({"versions":{"elm":"0.19.1"},"types":{"message":"Msg.Msg","aliases":{"Msg.Component":{"args":[],"type":"Msg.Component.Component"},"Msg.Error":{"args":[],"type":"Msg.Error.Error"},"Msg.LogInProvider":{"args":[],"type":"Msg.LogIn.Provider.Provider"},"Material.Msg":{"args":["m"],"type":"Internal.Msg.Msg m"},"Model.Recipe":{"args":[],"type":"{ id : UUID.UUID, name : String.String, timeInputs : Model.TimeInputs }"},"Model.TimeInput":{"args":[],"type":"{ minutes : String.String, seconds : String.String }"},"Model.TimeInputs":{"args":[],"type":"{ soak : Model.TimeInput, dev : Model.TimeInput, stop : Model.TimeInput, fix : Model.TimeInput, rinse : Model.TimeInput, wet : Model.TimeInput }"},"Model.User":{"args":[],"type":"{ uid : String.String, displayName : String.String }"},"Internal.Index.Index":{"args":[],"type":"String.String"},"Model.Step":{"args":[],"type":"Model.Step.Step"},"Internal.Ripple.Model.ActivateData":{"args":[],"type":"{ event : Internal.Ripple.Model.Event, isSurfaceDisabled : Basics.Bool, wasElementMadeActive : Basics.Bool, isUnbounded : Basics.Bool }"},"Internal.Ripple.Model.ClientRect":{"args":[],"type":"{ top : Basics.Float, left : Basics.Float, width : Basics.Float, height : Basics.Float }"},"Browser.Dom.Element":{"args":[],"type":"{ scene : { width : Basics.Float, height : Basics.Float }, viewport : { x : Basics.Float, y : Basics.Float, width : Basics.Float, height : Basics.Float }, element : { x : Basics.Float, y : Basics.Float, width : Basics.Float, height : Basics.Float } }"},"Internal.Ripple.Model.Event":{"args":[],"type":"{ eventType : String.String, pagePoint : { pageX : Basics.Float, pageY : Basics.Float } }"},"Internal.Menu.Model.Geometry":{"args":[],"type":"{ viewport : Internal.Menu.Model.Viewport, viewportDistance : Internal.Menu.Model.ViewportDistance, anchor : { width : Basics.Float, height : Basics.Float }, menu : { width : Basics.Float, height : Basics.Float } }"},"Internal.Slider.Model.Geometry":{"args":[],"type":"{ rect : Internal.Slider.Model.Rect, discrete : Basics.Bool, step : Maybe.Maybe Basics.Float, min : Basics.Float, max : Basics.Float }"},"Internal.TabBar.Model.Geometry":{"args":[],"type":"{ tabs : List.List Internal.TabBar.Model.Tab, scrollArea : { offsetWidth : Basics.Float }, tabBar : { offsetWidth : Basics.Float } }"},"Internal.TextField.Model.Geometry":{"args":[],"type":"{ width : Basics.Float, height : Basics.Float, labelWidth : Basics.Float }"},"Internal.Keyboard.Key":{"args":[],"type":"String.String"},"Internal.Keyboard.KeyCode":{"args":[],"type":"Basics.Int"},"Internal.Keyboard.Meta":{"args":[],"type":"{ altKey : Basics.Bool, ctrlKey : Basics.Bool, metaKey : Basics.Bool, shiftKey : Basics.Bool }"},"Internal.Slider.Model.Rect":{"args":[],"type":"{ left : Basics.Float, width : Basics.Float }"},"Internal.TabBar.Model.Tab":{"args":[],"type":"{ offsetLeft : Basics.Float, offsetWidth : Basics.Float, contentLeft : Basics.Float, contentRight : Basics.Float }"},"Internal.Menu.Model.Viewport":{"args":[],"type":"{ width : Basics.Float, height : Basics.Float }"},"Internal.Menu.Model.ViewportDistance":{"args":[],"type":"{ top : Basics.Float, right : Basics.Float, left : Basics.Float, bottom : Basics.Float }"}},"unions":{"Msg.Msg":{"args":[],"tags":{"Mdc":["Material.Msg Msg.Msg"],"GoRun":[],"GoEdit":[],"Input":["Msg.Component","String.String"],"Change":["Msg.Component","String.String"],"Tick":["Time.Posix"],"Next":[],"Restart":[],"Pause":[],"Init":[],"Drawer":["Msg.Visible"],"NewRecipe":[],"SelectRecipe":["Model.Recipe"],"RecipesChanged":["Dict.Dict String.String Model.Recipe"],"NameTextField":["Msg.Visible"],"LogInDialog":["Msg.Visible"],"SelectLogInDialogListItem":["Basics.Int"],"LogIn":["Msg.LogInProvider"],"LogOut":[],"UserChanged":["Maybe.Maybe Model.User"],"Error":["Msg.Error"]}},"Msg.Component.Component":{"args":[],"tags":{"Name":[],"Time":["Model.Step","Model.TimeHand.TimeHand"]}},"Dict.Dict":{"args":["k","v"],"tags":{"RBNode_elm_builtin":["Dict.NColor","k","v","Dict.Dict k v","Dict.Dict k v"],"RBEmpty_elm_builtin":[]}},"Msg.Error.Error":{"args":[],"tags":{"RecipeDecoder":["List.List Model.RecipeDecoderError"],"Foreign":["String.String"]}},"Basics.Int":{"args":[],"tags":{"Int":[]}},"Maybe.Maybe":{"args":["a"],"tags":{"Just":["a"],"Nothing":[]}},"Internal.Msg.Msg":{"args":["m"],"tags":{"Dispatch":["List.List m"],"ButtonMsg":["Internal.Index.Index","Internal.Button.Model.Msg m"],"CheckboxMsg":["Internal.Index.Index","Internal.Checkbox.Model.Msg"],"ChipMsg":["Internal.Index.Index","Internal.Chip.Model.Msg m"],"DialogMsg":["Internal.Index.Index","Internal.Dialog.Model.Msg"],"DrawerMsg":["Internal.Index.Index","Internal.Drawer.Model.Msg"],"FabMsg":["Internal.Index.Index","Internal.Fab.Model.Msg"],"IconButtonMsg":["Internal.Index.Index","Internal.IconButton.Model.Msg"],"ListMsg":["Internal.Index.Index","Internal.List.Model.Msg m"],"MenuMsg":["Internal.Index.Index","Internal.Menu.Model.Msg m"],"RadioButtonMsg":["Internal.Index.Index","Internal.RadioButton.Model.Msg"],"RippleMsg":["Internal.Index.Index","Internal.Ripple.Model.Msg"],"SelectMsg":["Internal.Index.Index","Internal.Select.Model.Msg m"],"SliderMsg":["Internal.Index.Index","Internal.Slider.Model.Msg m"],"SnackbarMsg":["Internal.Index.Index","Internal.Snackbar.Model.Msg m"],"SwitchMsg":["Internal.Index.Index","Internal.Switch.Model.Msg"],"TabBarMsg":["Internal.Index.Index","Internal.TabBar.Model.Msg m"],"TextFieldMsg":["Internal.Index.Index","Internal.TextField.Model.Msg"],"TopAppBarMsg":["Internal.Index.Index","Internal.TopAppBar.Model.Msg"]}},"Time.Posix":{"args":[],"tags":{"Posix":["Basics.Int"]}},"Msg.LogIn.Provider.Provider":{"args":[],"tags":{"Google":[],"Twitter":[]}},"String.String":{"args":[],"tags":{"String":[]}},"UUID.UUID":{"args":[],"tags":{"UUID":["Basics.Int","Basics.Int","Basics.Int","Basics.Int"]}},"Msg.Visible":{"args":[],"tags":{"Show":[],"Hide":[]}},"List.List":{"args":["a"],"tags":{}},"Internal.Button.Model.Msg":{"args":["m"],"tags":{"RippleMsg":["Internal.Ripple.Model.Msg"],"Click":["Basics.Bool","m"]}},"Internal.Checkbox.Model.Msg":{"args":[],"tags":{"NoOp":[],"Init":["Maybe.Maybe (Maybe.Maybe Internal.Checkbox.Model.State)","Maybe.Maybe Internal.Checkbox.Model.State"],"SetFocus":["Basics.Bool"],"AnimationEnd":[]}},"Internal.Chip.Model.Msg":{"args":["m"],"tags":{"RippleMsg":["Internal.Ripple.Model.Msg"],"Click":["m"]}},"Internal.Dialog.Model.Msg":{"args":[],"tags":{"NoOp":[],"StartAnimation":["Basics.Bool"],"EndAnimation":[]}},"Internal.Drawer.Model.Msg":{"args":[],"tags":{"NoOp":[],"StartAnimation":["Basics.Bool"],"EndAnimation":[]}},"Internal.Fab.Model.Msg":{"args":[],"tags":{"RippleMsg":["Internal.Ripple.Model.Msg"],"NoOp":[]}},"Internal.IconButton.Model.Msg":{"args":[],"tags":{"RippleMsg":["Internal.Ripple.Model.Msg"]}},"Internal.List.Model.Msg":{"args":["m"],"tags":{"NoOp":[],"RippleMsg":["String.String","Internal.Ripple.Model.Msg"],"FocusItem":["Basics.Int","String.String"],"ResetFocusedItem":[],"SelectItem":["Basics.Int","Basics.Int -> m"]}},"Internal.Menu.Model.Msg":{"args":["m"],"tags":{"NoOp":[],"Init":["{ quickOpen : Basics.Bool, index : Maybe.Maybe Basics.Int, focusedItemId : String.String }","Internal.Menu.Model.Geometry"],"AnimationEnd":[],"Open":[],"Close":[],"Toggle":[],"CloseDelayed":[],"DocumentClick":[],"KeyDown":["Internal.Keyboard.Meta","Internal.Keyboard.Key","Internal.Keyboard.KeyCode"],"KeyUp":["Internal.Keyboard.Meta","Internal.Keyboard.Key","Internal.Keyboard.KeyCode"],"ListMsg":["Internal.List.Model.Msg m"]}},"Internal.RadioButton.Model.Msg":{"args":[],"tags":{"RippleMsg":["Internal.Ripple.Model.Msg"],"NoOp":[],"SetFocus":["Basics.Bool"]}},"Internal.Ripple.Model.Msg":{"args":[],"tags":{"Focus":[],"Blur":[],"Activate0":["String.String","Internal.Ripple.Model.ActivateData"],"Activate":["Internal.Ripple.Model.ActivateData","Result.Result Browser.Dom.Error Browser.Dom.Element"],"Reactivate":["Internal.Ripple.Model.ActivateData","Result.Result Browser.Dom.Error Browser.Dom.Element"],"ActivationEnded":["Basics.Int"],"Deactivate":[],"DeactivationEnded":["Basics.Int"],"SetCssVariables":["Basics.Bool","Internal.Ripple.Model.ClientRect"]}},"Internal.Select.Model.Msg":{"args":["m"],"tags":{"NoOp":[],"Blur":[],"Focus":[],"Change":["String.String"],"RippleMsg":["Internal.Ripple.Model.Msg"],"KeyDown":["String.String","Internal.Keyboard.Key","Internal.Keyboard.KeyCode"],"OpenMenu":["String.String"],"ToggleMenu":[],"MenuSelection":["String.String","String.String -> m","String.String"],"MenuMsg":["Internal.Menu.Model.Msg m"]}},"Internal.Slider.Model.Msg":{"args":["m"],"tags":{"NoOp":[],"Init":["Internal.Slider.Model.Geometry"],"Resize":["Internal.Slider.Model.Geometry"],"InteractionStart":["String.String","{ pageX : Basics.Float }"],"KeyDown":[],"Focus":[],"Blur":[],"ThumbContainerPointer":["String.String","{ pageX : Basics.Float }"],"TransitionEnd":[],"Drag":["{ pageX : Basics.Float }"],"Up":[],"ActualUp":[]}},"Internal.Snackbar.Model.Msg":{"args":["m"],"tags":{"Move":["Basics.Int","Internal.Snackbar.Model.Transition"],"Dismiss":["Basics.Bool","Maybe.Maybe m"],"SetOpen":[]}},"Internal.Switch.Model.Msg":{"args":[],"tags":{"RippleMsg":["Internal.Ripple.Model.Msg"],"SetFocus":["Basics.Bool"],"NoOp":[]}},"Internal.TabBar.Model.Msg":{"args":["m"],"tags":{"NoOp":[],"Dispatch":["List.List m"],"RippleMsg":["Basics.Int","Internal.Ripple.Model.Msg"],"Init":["Internal.TabBar.Model.Geometry"],"SetActiveTab":["String.String","Basics.Int","Basics.Float"]}},"Internal.TextField.Model.Msg":{"args":[],"tags":{"Blur":[],"Focus":["Internal.TextField.Model.Geometry"],"Input":["String.String"],"NoOp":[]}},"Internal.TopAppBar.Model.Msg":{"args":[],"tags":{"RippleMsg":["String.String","Internal.Ripple.Model.Msg"],"Init":["{ scrollPosition : Basics.Float, topAppBarHeight : Basics.Float }"],"Resize":["{ scrollPosition : Basics.Float, topAppBarHeight : Basics.Float }"],"Scroll":["{ scrollPosition : Basics.Float }"]}},"Dict.NColor":{"args":[],"tags":{"Red":[],"Black":[]}},"Model.RecipeDecoderError":{"args":[],"tags":{"UuidError":["UUID.Error"]}},"Model.Step.Step":{"args":[],"tags":{"Soak":[],"Dev":[],"Stop":[],"Fix":[],"Rinse":[],"Wet":[]}},"Model.TimeHand.TimeHand":{"args":[],"tags":{"Minutes":[],"Seconds":[]}},"Basics.Bool":{"args":[],"tags":{"True":[],"False":[]}},"Browser.Dom.Error":{"args":[],"tags":{"NotFound":["String.String"]}},"UUID.Error":{"args":[],"tags":{"WrongFormat":[],"WrongLength":[],"UnsupportedVariant":[],"IsNil":[],"NoVersion":[]}},"Basics.Float":{"args":[],"tags":{"Float":[]}},"Result.Result":{"args":["error","value"],"tags":{"Ok":["value"],"Err":["error"]}},"Internal.Checkbox.Model.State":{"args":[],"tags":{"Checked":[],"Unchecked":[]}},"Internal.Snackbar.Model.Transition":{"args":[],"tags":{"Timeout":[],"Clicked":[]}}}}})}});
 
 //////////////////// HMR BEGIN ////////////////////
 
@@ -24227,9 +24212,7 @@ var noSleep = new _nosleep.default();
 
 var app = _Main.Elm.Main.init({
   node: document.querySelector('main'),
-  flags: {
-    seed: getRandomInt()
-  }
+  flags: getRandomInt()
 });
 
 app.ports.playAlarmCmd.subscribe(function () {
@@ -24344,7 +24327,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "59785" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "49231" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
