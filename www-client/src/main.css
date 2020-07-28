@@ -53,7 +53,7 @@ td.input {
 
 td.rest-plus::before {
     content: "-";
-    color: white;
+    color: rgba(0, 0, 0, 0);
 }
 
 td.time {
